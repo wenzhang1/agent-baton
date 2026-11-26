@@ -1,0 +1,66 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify before publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          TAG_NAME="${GITHUB_REF_NAME}"
+          echo "package.json version: ${PKG_VERSION}"
+          echo "git tag / release:    ${TAG_NAME}"
+          if [ "${PKG_VERSION}" != "${TAG_NAME}" ]; then
+            echo "ERROR: Tag (${TAG_NAME}) does not match package.json version (${PKG_VERSION})." >&2
+            exit 1
+          fi
+
+      - name: Run full test suite
+        run: node tests/run-tests.mjs
+
+      - name: Verify npm package contents
+        run: npm pack --dry-run
+
+  publish:
+    name: Publish package to npm (Trusted Publishing OIDC)
+    needs: verify
+    runs-on: ubuntu-latest
+    # Protected environment with Required Reviewers (Settings -> Environments -> npm-release).
+    # Configure matching Trusted Publisher on npmjs.com -> package Settings -> Trusted Publisher:
+    #   Owner: wenzhang1 | Repo: agent-baton | Workflow: publish.yml | Environment: npm-release
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24 (npm >= 11.5.1 for OIDC Trusted Publishing)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Publish via npm Trusted Publishing (zero long-lived tokens)
+        run: |
+          npm --version
+          npm publish --provenance --access public

@@ -1,17 +1,17 @@
-# CodeBaton Standard Planner Workflow (`WORKFLOW.md`)
+# agent-baton Standard Planner Workflow (`WORKFLOW.md`)
 
 > **Pass the coding baton across any AI CLI—with automatic failover and zero lost context.**
 
-This document is a **client-agnostic operational specification** for any AI agent acting as the **Planner** (e.g., Antigravity / Gemini, Claude Code, Codex, Cursor). Follow these rules whenever operating in CodeBaton Planner mode.
+This document is a **client-agnostic operational specification** for any AI agent acting as the **Planner** (e.g., Antigravity / Gemini, Claude Code, Codex, Cursor). Follow these rules whenever operating in agent-baton Planner mode.
 
 ---
 
 ## 1. Role Boundary & Coexistence with `AGENTS.md` / `CLAUDE.md`
 
-- **Planner (You)**: Owns architecture, task decomposition, `PLAN.md`, dispatching tasks via `codebaton`, inspecting `git diff`, running verification (tests/lint/build), creating `git commit` checkpoints, and handling failover/takeover.
-- **Executor (Invoked via `codebaton`)**: Owns implementing the assigned coding task directly inside the repository. Executors automatically receive `[CODEBATON_EXECUTOR_MODE]` and `CODEBATON_ROLE=executor`:
+- **Planner (You)**: Owns architecture, task decomposition, `PLAN.md`, dispatching tasks via `agent-baton`, inspecting `git diff`, running verification (tests/lint/build), creating `git commit` checkpoints, and handling failover/takeover.
+- **Executor (Invoked via `agent-baton`)**: Owns implementing the assigned coding task directly inside the repository. Executors automatically receive `[AGENT_BATON_EXECUTOR_MODE]` and `AGENT_BATON_ROLE=executor`:
   - Executors **still follow** the repository's existing `AGENTS.md` / `CLAUDE.md` coding standards.
-  - Executors **must never** edit `PLAN.md` or recursively invoke `codebaton` (enforced by a hard recursion lock).
+  - Executors **must never** edit `PLAN.md` or recursively invoke `agent-baton` (enforced by a hard recursion lock).
 
 ---
 
@@ -49,12 +49,12 @@ Choose the lowest tier that can reliably succeed on the first try:
 For each task (or batch) in `PLAN.md`:
 
 ### Step A — Dispatch to Executor
-Run `codebaton` with a **self-contained prompt** (include exact file paths, constraints, and acceptance criteria). For multi-line prompts, prefer `--task-file`:
+Run `agent-baton` with a **self-contained prompt** (include exact file paths, constraints, and acceptance criteria). For multi-line prompts, prefer `--task-file`:
 
 ```bash
-codebaton --tier <high|low> --task "<clear task description + acceptance criteria>"
+agent-baton --tier <high|low> --task "<clear task description + acceptance criteria>"
 # or for longer prompts:
-codebaton --tier <high|low> --task-file .codebaton/current-task.md
+agent-baton --tier <high|low> --task-file .agent-baton/current-task.md
 ```
 
 ### Step B — Handle Exit Code
@@ -62,7 +62,7 @@ codebaton --tier <high|low> --task-file .codebaton/current-task.md
 | Exit Code | Meaning | Planner Action |
 | :---: | :--- | :--- |
 | **`0`** | Executor succeeded | Proceed to **Step C (Verification & Commit)** |
-| **`1`** | Normal failure, build/code error, or timeout | Inspect the log path printed by `codebaton`. Refine instructions or pass error details back and retry (**max 2 retries** per task). |
+| **`1`** | Normal failure, build/code error, or timeout | Inspect the log path printed by `agent-baton`. Refine instructions or pass error details back and retry (**max 2 retries** per task). |
 | **`2`** | All executors unavailable/exhausted (at least one **short-term / 5-hour** limit) | Follow **Section 5 (Checkpoint & Exhaustion Policy)** based on `next_action=...` |
 | **`3`** | All usable executors exhausted by **weekly / hard quota** limits | Follow **Section 5 (Checkpoint & Exhaustion Policy)** based on `next_action=...` |
 
@@ -89,10 +89,10 @@ Never trust an Executor's self-report blindly. Always verify:
 
 ## 5. Checkpoint Recovery & 3-Mode Exhaustion Policy
 
-When `codebaton` exits with **`2`** (short-term / 5-hour limit) or **`3`** (weekly / hard quota limit), read the final structured directive printed to `stderr`:
+When `agent-baton` exits with **`2`** (short-term / 5-hour limit) or **`3`** (weekly / hard quota limit), read the final structured directive printed to `stderr`:
 
 ```text
-[codebaton] RESULT exit=<2|3> limit_type=<short_limit|weekly_limit|unavailable> next_action=<planner_takeover|manual_pause> reset_hint="..." executors=...
+[agent-baton] RESULT exit=<2|3> limit_type=<short_limit|weekly_limit|unavailable> next_action=<planner_takeover|manual_pause> reset_hint="..." executors=...
 ```
 
 ### Step 1 — Protect Committed Checkpoints & Clean Dirty State
@@ -103,7 +103,7 @@ Before pausing or switching modes, ensure the working tree is clean of half-fini
 
 ### Step 2 — Act Strictly According to `next_action`
 
-CodeBaton supports 3 user-configurable policies in `codebaton.config.json` (`exhaustion_policy.short_limit` and `exhaustion_policy.weekly_limit`):
+`agent-baton` supports 3 user-configurable policies in `agent-baton.config.json` (`exhaustion_policy.short_limit` and `exhaustion_policy.weekly_limit`):
 
 1. **`next_action=planner_takeover`** *(Default for `weekly_limit` / exit `3`; optional for `short_limit`)*
    - Log the exhaustion event and handover in `PLAN.md` under **Relay & Recovery Log**.
@@ -116,10 +116,10 @@ CodeBaton supports 3 user-configurable policies in `codebaton.config.json` (`exh
    - Stop dispatching, report the pause clearly to the user with the `reset_hint`, and wait for the user to resume manually once quota recovers.
 
 3. **`auto_wait`** *(Optional policy for `short_limit` or `weekly_limit`)*
-   - Handled automatically inside `codebaton`: the scheduler parses any reset time from the CLI error (or uses `poll_interval_seconds`), sleeps safely up to `max_wait_seconds`, and retries transparently.
-   - If `auto_wait` recovers, `codebaton` returns `0` normally.
-   - If `max_wait_seconds` is exceeded, `codebaton` exits with `2`/`3` and emits `next_action` set to `auto_wait.on_timeout` (`manual_pause` or `planner_takeover`) — follow rule 1 or 2 above.
-   - *Tip for long 5-hour waits*: If your Planner client has a short per-command timeout, either set `short_limit: "manual_pause"` and use your client's scheduler (e.g., `/schedule`) to resume later, or run `codebaton` in a detached terminal session.
+   - Handled automatically inside `agent-baton`: the scheduler parses any reset time from the CLI error (or uses `poll_interval_seconds`), sleeps safely up to `max_wait_seconds`, and retries transparently.
+   - If `auto_wait` recovers, `agent-baton` returns `0` normally.
+   - If `max_wait_seconds` is exceeded, `agent-baton` exits with `2`/`3` and emits `next_action` set to `auto_wait.on_timeout` (`manual_pause` or `planner_takeover`) — follow rule 1 or 2 above.
+   - *Tip for long 5-hour waits*: If your Planner client has a short per-command timeout, either set `short_limit: "manual_pause"` and use your client's scheduler (e.g., `/schedule`) to resume later, or run `agent-baton` in a detached terminal session.
 
 ---
 
@@ -128,5 +128,5 @@ CodeBaton supports 3 user-configurable policies in `codebaton.config.json` (`exh
 When resuming work in a **new session or a completely different AI client**:
 1. Read `PLAN.md` (focus on **Global Constraints**, tasks marked `[!]` or `[ ]`, and **Latest Handoff Context**).
 2. Run `git status` and `git log -n 5 --oneline` to confirm the exact last verified checkpoint.
-3. Run `codebaton --status` to inspect active executor cooldowns (run `codebaton --reset-state` if quota has already reset).
+3. Run `agent-baton --status` to inspect active executor cooldowns (run `agent-baton --reset-state` if quota has already reset).
 4. Resume from the first `[!]` or `[ ]` task with zero lost context.

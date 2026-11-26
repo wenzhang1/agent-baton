@@ -1,9 +1,9 @@
-# CodeBaton runtime artifacts (logs & cooldown/mock state)
-.codebaton/logs/
-.codebaton/*.json
+# Agent-Baton runtime artifacts (logs & cooldown/mock state)
+.agent-baton/logs/
+.agent-baton/*.json
 
-# User-local config (keep codebaton.config.example.json tracked)
-codebaton.config.json
+# User-local config (keep agent-baton.config.example.json tracked)
+agent-baton.config.json
 
 # OS & editor junk
 .DS_Store
@@ -13,6 +13,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Node (kept clean even though codebaton has zero dependencies)
+# Node (kept clean even though agent-baton has zero dependencies)
 node_modules/
 npm-debug.log*
