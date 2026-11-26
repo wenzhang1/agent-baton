@@ -44,11 +44,32 @@ batonflow --version
    This installs global `SKILL.md` files without creating any project files in your current directory. Inside each repository you want to orchestrate, you still run `batonflow init` once to create `batonflow.config.json` and `PLAN.md`.
 
 ### Customize `batonflow.config.json` & Verify
-Keep only the AI CLIs you actually have installed and signed into in `executor_chain`:
+Keep only the AI CLIs you actually have installed and signed into in `executor_chain`. The default config comes pre-populated with latest-generation models and reasoning effort controls:
 
 ```json
 {
   "executor_chain": ["codex", "claude", "gemini"],
+  "tiers": {
+    "high": {
+      "codex": "gpt-6.2-astra",
+      "claude": "claude-opus-5-5",
+      "gemini": "gemini-4-neon"
+    },
+    "low": {
+      "codex": "gpt-6.2-sol",
+      "claude": "claude-sonnet-5-5",
+      "gemini": "gemini-4-hydrogen"
+    }
+  },
+  "default_effort": {
+    "high": "high",
+    "low": "medium"
+  },
+  "effort_map": {
+    "gemini": {
+      "max": "xhigh"
+    }
+  },
   "exhaustion_policy": {
     "short_limit": "manual_pause",
     "weekly_limit": "planner_takeover"
@@ -56,16 +77,16 @@ Keep only the AI CLIs you actually have installed and signed into in `executor_c
 }
 ```
 
-Run a zero-API-cost dry run to verify command resolution:
+Run a zero-API-cost dry run to verify model & effort resolution (notice how `--effort max` automatically maps to `xhigh` for `agy` / Gemini 4):
 ```bash
-batonflow --dry-run --tier high --task "Verify setup"
+batonflow --dry-run --tier high --effort max --task "Verify setup"
 ```
 
 ---
 
-## 2. Using `batonflow` Directly Inside Antigravity Chat
+## 2. Using `batonflow` Directly Inside AI Client Chat
 
-Once initialized, you **do not** need to run `batonflow --tier ...` manually—just talk to Antigravity naturally.
+Once initialized, you **do not** need to run `batonflow --tier ...` manually—just talk to **Antigravity, Claude Code (`/batonflow`), Codex, or Cursor** naturally.
 
 ### Why normal conversations stay unaffected
 The `batonflow` Skill only activates when your prompt mentions `batonflow`, `PLAN.md`, or multi-CLI relay work. Everyday questions like *"Explain `src/auth.ts`"* or *"Fix this typo"* behave normally.
@@ -73,15 +94,15 @@ The `batonflow` Skill only activates when your prompt mentions `batonflow`, `PLA
 ### Example Prompt 1 — Plan first, then relay-execute
 > "Use **batonflow** to break down 'Add JWT login + refresh token rotation with tests' into `PLAN.md` following `.batonflow/WORKFLOW.md`. Show me the plan first, and once I approve, dispatch tasks via `batonflow`."
 
-What Antigravity does automatically:
+What your Planner client does automatically:
 1. Activates the `batonflow` Skill and reads `.batonflow/WORKFLOW.md`.
 2. Populates `PLAN.md` with `high` / `low` tiers, batch groups, dependencies, and acceptance criteria.
 3. After your approval, runs:
-   - Single-step `--tier high` for core JWT/auth logic (`T1`, `T2`).
-   - Bundled `--tier low` for boilerplate routes + unit tests (`T3 + T4`).
+   - Single-step `--tier high` (default effort `high`, or `--effort xhigh`/`max` for deep debugging) for core JWT/auth logic (`T1`, `T2`).
+   - Bundled `--tier low` (default effort `medium`, or `--effort low` for quick mechanical edits) for boilerplate routes + unit tests (`T3 + T4`).
 4. After each `exit 0`, inspects `git diff`, runs `npm test` / `npm run build`, marks `[x]` in `PLAN.md`, and creates a clean `git commit` checkpoint.
 
-> **Tip:** The first time Antigravity executes `batonflow --tier ...` in the terminal, click **Always Allow** so subsequent dispatches run unattended.
+> **Tip:** The first time your Planner executes `batonflow --tier ...` in the terminal, click **Always Allow** so subsequent dispatches run unattended.
 
 ---
 
@@ -90,16 +111,16 @@ What Antigravity does automatically:
 Try the built-in zero-cost mock simulation to see what happens when your primary Executor (`codex`) hits a 5-hour 429 rate limit:
 
 ```bash
-batonflow --mock failover --tier high --task "Implement JWT refresh middleware"
+batonflow --mock failover --tier high --effort xhigh --task "Implement JWT refresh middleware"
 ```
 
 Sample output:
 ```text
-[batonflow] DISPATCH executor=codex tier=high model=mock-codex-high
+[batonflow] DISPATCH executor=codex tier=high model=mock-codex-high effort=xhigh
 [codex] HTTP 429 Too Many Requests: You have reached your 5-hour rate limit. Please try again in 45 minutes.
 [batonflow] HANDOFF codex (short_limit: try again in 45 minutes) -> claude
-[batonflow] DISPATCH executor=claude tier=high model=mock-claude-high
-[batonflow] SUCCESS executor=claude model=mock-claude-high duration=0.1s log=.batonflow/logs/...
+[batonflow] DISPATCH executor=claude tier=high model=mock-claude-high effort=xhigh
+[batonflow] SUCCESS executor=claude model=mock-claude-high effort=xhigh duration=0.1s log=.batonflow/logs/...
 ```
 
 `codex` is recorded in `.batonflow/state.json` cooldown, so the next task skips straight to `claude` without wasting time hitting 429 again.
@@ -152,7 +173,13 @@ batonflow --status
 batonflow --reset-state
 
 # Force a single executor without chain failover
-batonflow --tier high --executor claude --task "Audit auth edge cases"
+batonflow --tier high --effort xhigh --executor claude --task "Audit auth edge cases"
+
+# Maximum reasoning effort (codex/claude receive `max`; gemini/agy automatically maps to `xhigh`)
+batonflow --tier high --effort max --task "Root-cause race condition in job queue"
+
+# Fast low-effort pass for mechanical edits
+batonflow --tier low --effort low --task "Rename env var constants across tests"
 
 # Pass a long multi-line task prompt from a file
 batonflow --tier high --task-file .batonflow/current-task.md
