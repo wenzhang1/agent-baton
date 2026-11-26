@@ -91,7 +91,16 @@ Once initialized, you **do not** need to run `batonflow --tier ...` manually—j
 ### Why normal conversations stay unaffected
 The `batonflow` Skill only activates when your prompt mentions `batonflow`, `PLAN.md`, or multi-CLI relay work. Everyday questions like *"Explain `src/auth.ts`"* or *"Fix this typo"* behave normally.
 
-### Example Prompt 1 — Plan first, then relay-execute
+### Everyday One-Liner Prompts (Recommended)
+Because `skills/batonflow/SKILL.md` automatically instructs your Planner to read `.batonflow/WORKFLOW.md` and decompose tasks into `PLAN.md`, you don't need to mention those files explicitly in daily use:
+
+- **New feature**: `"Use batonflow to implement user login with JWT refresh rotation and unit tests"`
+- **Even shorter in Claude Code**: `"/batonflow Implement user login with JWT refresh rotation and unit tests"`
+- **Resume after quota reset / switching clients**: `"Continue with batonflow"`
+
+> **Trigger rule:** The only time the relay workflow will *not* activate is when your prompt mentions neither `batonflow` nor `PLAN.md` (e.g., *"Add a login feature"*), in which case the client edits code normally. As soon as you mention **`batonflow`**, the full workflow activates automatically.
+
+### Detailed Prompt Example (Explicit Step-by-Step)
 > "Use **batonflow** to break down 'Add JWT login + refresh token rotation with tests' into `PLAN.md` following `.batonflow/WORKFLOW.md`. Show me the plan first, and once I approve, dispatch tasks via `batonflow`."
 
 What your Planner client does automatically:

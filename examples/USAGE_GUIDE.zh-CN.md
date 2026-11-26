@@ -91,7 +91,16 @@ batonflow --dry-run --tier high --effort max --task "验证配置与链路"
 ### 平时聊天会被打扰吗？
 **不会。** 只有当你提到 `batonflow`、`PLAN.md` 或明确要求多 CLI 接力执行时，才会加载 `batonflow` Skill；日常提问（如“解释这段代码”、“修一个 typo”）完全按正常模式响应。
 
-### 对话示例 1：先拆解计划，再分批接力执行
+### 日常极简用法（一句话就够）
+因为 `skills/batonflow/SKILL.md` 已内置前置步骤（自动读取 `.batonflow/WORKFLOW.md` 并拆解写入 `PLAN.md`），平时使用时不需要专门把这两个文件名敲出来：
+
+- **新需求**：`用 batonflow 实现用户登录与 JWT 刷新并补全单元测试`
+- **Claude Code 里更短**：`/batonflow 实现用户登录与 JWT 刷新并补全单元测试`
+- **额度恢复 / 换客户端续传**：`用 batonflow 继续`
+
+> **触发说明**：唯一会不触发的情况，是你**完全没提 `batonflow` 也没提 `PLAN.md`**（例如只说“帮我做个登录功能”）——这时客户端会按普通模式自己直接写代码，不会进入接力流程。只要话里带了 **`batonflow`**，整套规范就会自动生效。
+
+### 完整示例 Prompt（显式指定步骤）
 直接对你的 Planner 客户端说：
 
 > 「请使用 **batonflow**，按 `.batonflow/WORKFLOW.md` 的规范把“实现用户登录与 JWT 刷新轮换并补全单元测试”拆解写入 `PLAN.md`。先给我确认，确认后用 `batonflow` 分批派发并验收。」
