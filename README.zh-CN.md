@@ -122,25 +122,36 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
   "executor_chain": ["codex", "claude", "gemini"],
   "tiers": {
     "high": {
-      "codex": "gpt-5.3-codex",
-      "claude": "claude-opus-4-6",
-      "gemini": "gemini-2.5-pro"
+      "codex": "gpt-6.2-astra",
+      "claude": "claude-opus-5-5",
+      "gemini": "gemini-4-neon"
     },
     "low": {
-      "codex": "gpt-5.1-codex-mini",
-      "claude": "claude-sonnet-4-6",
-      "gemini": "gemini-2.5-flash"
+      "codex": "gpt-6.2-sol",
+      "claude": "claude-sonnet-5-5",
+      "gemini": "gemini-4-hydrogen"
+    }
+  },
+  "default_effort": {
+    "high": "high",
+    "low": "medium"
+  },
+  "effort_map": {
+    "gemini": {
+      "max": "xhigh"
     }
   },
   "commands": {
-    "codex": ["codex", "exec", "-m", "{{model}}", "{{task}}"],
-    "claude": ["claude", "-p", "--model", "{{model}}", "{{task}}"],
-    "gemini": ["gemini", "-p", "-m", "{{model}}", "{{task}}"]
+    "codex": ["codex", "exec", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
+    "claude": ["claude", "-p", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
+    "gemini": ["agy", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
   }
 }
 ```
 
-> **命令模板双格式安全兼容**：推荐使用**参数数组格式**（`shell: false` 直接传递参数，任务中包含多行代码块、引号、反引号、`$VAR` 也不会产生转义错误）；同时也兼容单行**字符串模板**（如 `"codex exec -m {{model}} \"{{task}}\""`），内部会自动安全分词或 POSIX 转义。
+> **思维/推理强度控制（`--effort`）**：原生支持 `low` / `medium` / `high` / `xhigh` / `max` 5 档。不传 `--effort` 时自动采用 `default_effort[tier]`（默认 `high` 档用 `high`，`low` 档用 `medium`）；`effort_map` 可在接力时自动把目标 CLI 不支持的档位做平滑降级（例如把 `max` 自动映射为 `agy`/Gemini 4 支持的 `xhigh`，防止接力报错）。
+>
+> **命令模板双格式安全兼容**：推荐使用**参数数组格式**（`shell: false` 直接传递参数，任务中包含多行代码块、引号、反引号、`$VAR` 也不会产生转义错误）；同时也兼容单行**字符串模板**（如 `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`），内部会自动安全分词或 POSIX 转义。
 
 ### 5 小时限额 vs 周限额：三模式耗尽策略配置
 
@@ -174,6 +185,7 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 | `init [目录] [--adapter ...] [--force]` | 初始化配置、工作流、任务板、通用 Skill（`.agents/skills/` 与 `.claude/skills/`）与适配器到指定目录（默认当前目录） |
 | `init --global-skill [目标] [--force]` | 一次性将通用 Skill 安装到全局（`all` / `antigravity` / `claude-code` / `codex`），不生成项目文件 |
 | `--tier <high\|low>` | 指定能力档位（派发任务时必填） |
+| `--effort <强度>` | 指定推理/思维强度：`low \| medium \| high \| xhigh \| max`（可选，默认读取 `default_effort[tier]`） |
 | `--task "<任务描述>"` | 内联任务文本 |
 | `--task-file <路径\|->` | 从文件或标准输入（`-`）读取长任务 Prompt |
 | `--executor <名称>` | 强制指定单个 Executor（不走链路接力） |

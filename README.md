@@ -120,25 +120,36 @@ See [`batonflow.config.example.json`](batonflow.config.example.json) for the ful
   "executor_chain": ["codex", "claude", "gemini"],
   "tiers": {
     "high": {
-      "codex": "gpt-5.3-codex",
-      "claude": "claude-opus-4-6",
-      "gemini": "gemini-2.5-pro"
+      "codex": "gpt-6.2-astra",
+      "claude": "claude-opus-5-5",
+      "gemini": "gemini-4-neon"
     },
     "low": {
-      "codex": "gpt-5.1-codex-mini",
-      "claude": "claude-sonnet-4-6",
-      "gemini": "gemini-2.5-flash"
+      "codex": "gpt-6.2-sol",
+      "claude": "claude-sonnet-5-5",
+      "gemini": "gemini-4-hydrogen"
+    }
+  },
+  "default_effort": {
+    "high": "high",
+    "low": "medium"
+  },
+  "effort_map": {
+    "gemini": {
+      "max": "xhigh"
     }
   },
   "commands": {
-    "codex": ["codex", "exec", "-m", "{{model}}", "{{task}}"],
-    "claude": ["claude", "-p", "--model", "{{model}}", "{{task}}"],
-    "gemini": ["gemini", "-p", "-m", "{{model}}", "{{task}}"]
+    "codex": ["codex", "exec", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
+    "claude": ["claude", "-p", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
+    "gemini": ["agy", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
   }
 }
 ```
 
-> **Safe Command Templates:** `commands` supports both **argv arrays** (recommended—executed with `shell: false`, 100% immune to quote/backtick/newline/`$VAR` corruption) and **string templates** (e.g., `"codex exec -m {{model}} \"{{task}}\""`, safely tokenized or POSIX-quoted automatically).
+> **Reasoning / Thinking Effort (`--effort`):** Supports `low`, `medium`, `high`, `xhigh`, and `max`. When omitted, `batonflow` uses `default_effort[tier]` (`high` → `high`, `low` → `medium`). Use `effort_map` to safely downgrade unsupported levels during failover (e.g., mapping `max` → `xhigh` for `agy` / Gemini 4).
+>
+> **Safe Command Templates:** `commands` supports both **argv arrays** (recommended—executed with `shell: false`, 100% immune to quote/backtick/newline/`$VAR` corruption) and **string templates** (e.g., `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`, safely tokenized or POSIX-quoted automatically).
 
 ### 3-Mode Exhaustion Policy (`short_limit` vs `weekly_limit`)
 
@@ -172,6 +183,7 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 | `init [dir] [--adapter ...] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
 | `init --global-skill [target] [--force]` | Install the universal Skill globally (`all` / `antigravity` / `claude-code` / `codex`) without creating project files |
 | `--tier <high\|low>` | Capability tier to route (required for task dispatch) |
+| `--effort <level>` | Reasoning/thinking effort: `low \| medium \| high \| xhigh \| max` (optional; defaults to `default_effort[tier]`) |
 | `--task "<text>"` | Inline task prompt |
 | `--task-file <path\|->` | Read multi-line prompt from file or stdin (`-`) |
 | `--executor <name>` | Force a single executor (no chain failover) |

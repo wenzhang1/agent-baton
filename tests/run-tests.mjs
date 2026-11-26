@@ -37,9 +37,9 @@ function createTestWorkspace(name, configOverrides = {}) {
       },
     },
     commands: {
-      codex: [process.execPath, MOCK_EXECUTOR, '--executor', 'codex', '--model', '{{model}}', '--task', '{{task}}'],
-      claude: [process.execPath, MOCK_EXECUTOR, '--executor', 'claude', '--model', '{{model}}', '--task', '{{task}}'],
-      gemini: [process.execPath, MOCK_EXECUTOR, '--executor', 'gemini', '--model', '{{model}}', '--task', '{{task}}'],
+      codex: [process.execPath, MOCK_EXECUTOR, '--executor', 'codex', '--model', '{{model}}', '--effort', '{{effort}}', '--task', '{{task}}'],
+      claude: [process.execPath, MOCK_EXECUTOR, '--executor', 'claude', '--model', '{{model}}', '--effort', '{{effort}}', '--task', '{{task}}'],
+      gemini: [process.execPath, MOCK_EXECUTOR, '--executor', 'gemini', '--model', '{{model}}', '--effort', '{{effort}}', '--task', '{{task}}'],
     },
     exhaustion_policy: {
       short_limit: 'manual_pause',
@@ -473,6 +473,43 @@ test('20. `batonflow init --global-skill [target]` installs universal SKILL.md w
   });
   assert.equal(r3.status, 0, r3.stderr);
   assert.match(fs.readFileSync(claudeSkill, 'utf8'), /^---\nname: batonflow\n/);
+});
+
+test('21. Reasoning effort defaults per tier, --effort overrides, and effort_map downgrades on failover', () => {
+  const { dir } = createTestWorkspace('effort-routing');
+
+  // Default effort: high -> high, low -> medium
+  const highDefault = runBatonflow(['--tier', 'high', '--task', 'Core design'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok' },
+  });
+  assert.equal(highDefault.status, 0, highDefault.stderr);
+  assert.equal(parseMockJson(highDefault.stdout).effort, 'high');
+
+  const lowDefault = runBatonflow(['--tier', 'low', '--task', 'Simple tests'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok' },
+  });
+  assert.equal(lowDefault.status, 0, lowDefault.stderr);
+  assert.equal(parseMockJson(lowDefault.stdout).effort, 'medium');
+
+  // Explicit --effort xhigh override
+  const xhigh = runBatonflow(['--tier', 'high', '--effort', 'xhigh', '--task', 'Deep debug'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok' },
+  });
+  assert.equal(xhigh.status, 0, xhigh.stderr);
+  assert.equal(parseMockJson(xhigh.stdout).effort, 'xhigh');
+
+  // Failover with --effort max -> codex & claude hit limit -> gemini receives mapped `xhigh`
+  const mappedFailover = runBatonflow(['--tier', 'high', '--effort', 'max', '--task', 'Hardest bug'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:short_limit,claude:short_limit,gemini:ok' },
+  });
+  assert.equal(mappedFailover.status, 0, mappedFailover.stderr);
+  const payload = parseMockJson(mappedFailover.stdout);
+  assert.equal(payload.executor, 'gemini');
+  assert.equal(payload.effort, 'xhigh');
 });
 
 // Run all tests

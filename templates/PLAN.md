@@ -52,4 +52,4 @@ Status legend: `[ ]` Pending · `[x]` Verified & Committed · `[!]` Interrupted 
 
 | Timestamp (UTC) | Task | Tier | Executor / Model | Outcome | Commit / Notes |
 | :--- | :--- | :---: | :--- | :--- | :--- |
-| `YYYY-MM-DD HH:MM` | `T1` | `high` | `codex (gpt-5.3-codex)` | `example` | Replace with real entries as tasks complete |
+| `YYYY-MM-DD HH:MM` | `T1` | `high` | `codex (gpt-6.2-astra / high)` | `example` | Replace with real entries as tasks complete |
