@@ -12,7 +12,7 @@
 - **按能力档位（`high` / `low`）动态路由模型**：屏蔽各家 CLI 模型命名差异，统一按档位调度。
 - **分层限流识别与自动接力**：自动区分 **5 小时滚动/短周期限流（`short_limit`）** 与 **周限额/硬配额耗尽（`weekly_limit`）**，按 `executor_chain` 顺位交接。
 - **三模式耗尽策略自由配置**：针对 5 小时限额和周限额分别支持 **`planner_takeover`（由 Planner 接手）**、**`manual_pause`（等待后手动继续）**、**`auto_wait`（时间到达自动重试继续）** 三种策略。
-- **一行命令初始化（`batonflow init`）**：进入任意项目目录直接执行 `batonflow init`，零冲突初始化配置、工作流、任务板与适配器。
+- **一行命令初始化（`batonflow init`）**：进入任意项目目录直接执行 `batonflow init`，零冲突初始化配置、工作流、任务板与适配器——并自动生成 **Antigravity Skill**（`.agents/skills/batonflow/SKILL.md`，也支持 `batonflow init --global-skill` 一次全局安装）。
 - **基于 Git 与 `PLAN.md` 的跨客户端断点续传**：随时切换不同 AI 客户端无缝接着干，零上下文丢失。
 - **与项目原有 `AGENTS.md` / `CLAUDE.md` 安全共存**：三层防串台保护（幂等锚点追加、`[BATONFLOW_EXECUTOR_MODE]` 身份前缀、硬递归环境变量锁），保留原有编码规范且杜绝死循环。
 
@@ -69,15 +69,22 @@ cd batonflow && npm link
 cd /path/to/your-project
 batonflow init
 # 可选适配器：batonflow init --adapter antigravity | claude-code | all | none
+
+# 可选：一次性将 Antigravity Skill 安装到全局（本机所有仓库通用）
+batonflow init --global-skill
 ```
 
 `batonflow init` 会安全完成以下操作：
 - 生成 `batonflow.config.json`（已有文件默认跳过，不覆盖）
 - 生成 `.batonflow/WORKFLOW.md`（标准化 Planner 工作流规范）
 - 生成 `PLAN.md`（任务板与断点恢复日志模板）
-- 安装 Antigravity 规则 `.agent/rules/batonflow.md`
+- 安装 **Antigravity Skill**（`.agents/skills/batonflow/SKILL.md`，渐进式按需加载，不打扰日常对话）与 `.agent/rules/batonflow.md`
 - 以幂等锚点块（`<!-- batonflow:start --> ... <!-- batonflow:end -->`）追加到 `CLAUDE.md`，**100% 保留原有规则**，并按需写入 `.claude/settings.json` 权限白名单
 - 自动将 `.batonflow/logs/` 和 `.batonflow/*.json` 追加到 `.gitignore`
+
+> **初始化后怎么使用？** 直接在 **Antigravity**（或 Claude Code）中打开项目并对话即可，例如说：*「请用 batonflow 按 `.batonflow/WORKFLOW.md` 把 XXX 拆解进 `PLAN.md` 并分批派发验收」*。平时普通提问不会触发 Skill。
+>
+> 完整端到端对话示例、Skill 配置、限流交接与跨客户端续传演示，请参阅 **[examples/USAGE_GUIDE.zh-CN.md](examples/USAGE_GUIDE.zh-CN.md)**（[English Guide](examples/USAGE_GUIDE.md)）。
 
 ### 3. 零额度消耗体验内置 Mock 接力
 
@@ -161,7 +168,8 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 
 | 命令 / 参数 | 说明 |
 | :--- | :--- |
-| `init [目录] [--adapter ...] [--force]` | 初始化配置、工作流、任务板与适配器到当前目录（默认）或指定目录 |
+| `init [目录] [--adapter ...] [--force]` | 初始化配置、工作流、任务板、Antigravity Skill 与适配器到当前目录（默认）或指定目录 |
+| `init --global-skill [--force]` | 一次性将 Antigravity Skill 安装到全局（`~/.gemini/config/skills/batonflow/SKILL.md`），不生成项目文件 |
 | `--tier <high\|low>` | 指定能力档位（派发任务时必填） |
 | `--task "<任务描述>"` | 内联任务文本 |
 | `--task-file <路径\|->` | 从文件或标准输入（`-`）读取长任务 Prompt |

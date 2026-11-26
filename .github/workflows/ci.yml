@@ -39,6 +39,7 @@ jobs:
           test -f "$TMPDIR_INIT/batonflow.config.json"
           test -f "$TMPDIR_INIT/.batonflow/WORKFLOW.md"
           test -f "$TMPDIR_INIT/PLAN.md"
+          test -f "$TMPDIR_INIT/.agents/skills/batonflow/SKILL.md"
           test -f "$TMPDIR_INIT/.agent/rules/batonflow.md"
           test -f "$TMPDIR_INIT/.claude/settings.json"
           rm -rf "$TMPDIR_INIT"

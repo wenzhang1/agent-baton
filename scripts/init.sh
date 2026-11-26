@@ -155,6 +155,7 @@ append_gitignore_entry ".batonflow/logs/"
 append_gitignore_entry ".batonflow/*.json"
 
 if [[ "${ADAPTER}" == "antigravity" || "${ADAPTER}" == "all" ]]; then
+  copy_safe "${REPO_ROOT}/adapters/antigravity/SKILL.md" "${TARGET_DIR}/.agents/skills/batonflow/SKILL.md" ".agents/skills/batonflow/SKILL.md"
   copy_safe "${REPO_ROOT}/adapters/antigravity/rules.md" "${TARGET_DIR}/.agent/rules/batonflow.md" ".agent/rules/batonflow.md"
 fi
 
