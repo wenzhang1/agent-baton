@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Verify tag matches package.json version
         run: |
@@ -41,10 +41,12 @@ jobs:
         run: npm pack --dry-run
 
   publish:
-    name: Publish package to npm
+    name: Publish package to npm (Trusted Publishing OIDC)
     needs: verify
     runs-on: ubuntu-latest
-    # Protected environment with Required Reviewers (Settings -> Environments -> npm-release)
+    # Protected environment with Required Reviewers (Settings -> Environments -> npm-release).
+    # Configure matching Trusted Publisher on npmjs.com -> package Settings -> Trusted Publisher:
+    #   Owner: wenzhang1 | Repo: agent-baton | Workflow: publish.yml | Environment: npm-release
     environment: npm-release
     permissions:
       contents: read
@@ -53,13 +55,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js with npm registry
+      - name: Setup Node.js 24 (npm >= 11.5.1 for OIDC Trusted Publishing)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
+          node-version: 24
 
-      - name: Publish with npm provenance
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish via npm Trusted Publishing (zero long-lived tokens)
+        run: |
+          npm --version
+          npm publish --provenance --access public

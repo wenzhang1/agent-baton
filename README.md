@@ -242,10 +242,9 @@ npm test
 npm pack --dry-run
 ```
 
-Maintainers publish new versions via the protected `npm-release` GitHub Environment (`.github/workflows/publish.yml`):
-1. Bump `"version"` in `package.json` via PR to `main`.
-2. Tag and push (`git tag v0.1.0 && git push origin v0.1.0`) or publish a GitHub Release.
-3. Approve the deployment gate in **Actions → Publish to npm** (`npm-release` environment) to publish with `--provenance`.
+Maintainers publish new versions via **npm Trusted Publishing (OIDC)**—no long-lived `NPM_TOKEN` secrets required—gated by the protected `npm-release` GitHub Environment (`.github/workflows/publish.yml`):
+1. **First-time bootstrap (`v0.1.0`)**: Run `npm login && npm publish --access public` once locally, then bind GitHub Actions under `npmjs.com/package/agent-baton/access` → **Trusted Publisher** (`wenzhang1` / `agent-baton` / `publish.yml` / `npm-release`).
+2. **All subsequent releases**: Bump `"version"` in `package.json` via PR to `main`, push a matching tag (`git tag v0.1.1 && git push origin v0.1.1`), and approve the deployment gate in **Actions → Publish to npm** (`npm-release`).
 
 ---
 

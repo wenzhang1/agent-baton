@@ -242,10 +242,9 @@ npm test
 npm pack --dry-run
 ```
 
-维护者可通过受保护的 `npm-release` GitHub Environment（`.github/workflows/publish.yml`）自动发布新版本：
-1. 通过 PR 更新 `package.json` 中的 `"version"` 并合入 `main`。
-2. 推送版本 Tag（`git tag v0.1.0 && git push origin v0.1.0`）或在 GitHub 创建 Release。
-3. 在 **Actions → Publish to npm** 中点击批准 `npm-release` 人工门禁，自动附带 `--provenance` 发布到 npm。
+维护者通过 **npm Trusted Publishing（OIDC，无需配置长期 `NPM_TOKEN`）** + 受保护的 `npm-release` GitHub Environment（`.github/workflows/publish.yml`）自动发布新版本：
+1. **首次发版初始化（`v0.1.0`）**：在本地运行一次 `npm login && npm publish --access public`，然后在 `npmjs.com/package/agent-baton/access` → **Trusted Publisher** 中绑定 GitHub Actions（`wenzhang1` / `agent-baton` / `publish.yml` / `npm-release`）。
+2. **后续全部发版**：通过 PR 更新 `package.json` 版本号并合入 `main` → 推送对应 Tag（如 `git tag v0.1.1 && git push origin v0.1.1`）→ 在 **Actions → Publish to npm** 中点击批准 `npm-release` 人工门禁，自动通过 OIDC 附带 `--provenance` 发布到 npm。
 
 ---
 
