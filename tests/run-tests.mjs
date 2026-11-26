@@ -512,6 +512,43 @@ test('21. Reasoning effort defaults per tier, --effort overrides, and effort_map
   assert.equal(payload.effort, 'xhigh');
 });
 
+test('22. `batonflow init --permission-mode yolo` and `batonflow mode safe|yolo` switch presets safely', () => {
+  const dir = path.join(tmpBase, 'permission-modes');
+  fs.mkdirSync(dir, { recursive: true });
+
+  // 1. Initialize directly in yolo mode
+  const initYolo = runBatonflow(['init', '--permission-mode', 'yolo'], { cwd: dir });
+  assert.equal(initYolo.status, 0, initYolo.stderr);
+  const cfgPath = path.join(dir, 'batonflow.config.json');
+  let cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(cfg.commands.codex.includes('--yolo'));
+  assert.ok(cfg.commands.claude.includes('--dangerously-skip-permissions'));
+  assert.ok(cfg.commands.gemini.includes('--dangerously-skip-permissions'));
+
+  // Add a custom executor & custom timeout to ensure `batonflow mode` preserves them
+  cfg.commands.opencode = ['opencode', 'run', '{{task}}'];
+  cfg.timeout_seconds = 1234;
+  fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf8');
+
+  // 2. Switch back to safe mode
+  const toSafe = runBatonflow(['mode', 'safe'], { cwd: dir });
+  assert.equal(toSafe.status, 0, toSafe.stderr);
+  cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(cfg.commands.codex.includes('workspace-write'));
+  assert.ok(cfg.commands.claude.includes('acceptEdits'));
+  assert.ok(cfg.commands.gemini.includes('--mode=auto'));
+  assert.deepEqual(cfg.commands.opencode, ['opencode', 'run', '{{task}}']);
+  assert.equal(cfg.timeout_seconds, 1234);
+
+  // 3. Switch to yolo mode again
+  const toYolo = runBatonflow(['mode', 'yolo'], { cwd: dir });
+  assert.equal(toYolo.status, 0, toYolo.stderr);
+  cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(cfg.commands.codex.includes('--yolo'));
+  assert.ok(cfg.commands.claude.includes('--dangerously-skip-permissions'));
+  assert.ok(cfg.commands.gemini.includes('--dangerously-skip-permissions'));
+});
+
 // Run all tests
 let passed = 0;
 let failed = 0;

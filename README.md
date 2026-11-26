@@ -147,7 +147,24 @@ See [`batonflow.config.example.json`](batonflow.config.example.json) for the ful
 }
 ```
 
-> **Non-Interactive Executor Permissions:** Because `batonflow` runs Executor CLIs headlessly (`stdin` closed), the defaults enable **scoped workspace-write autonomy** (`--sandbox workspace-write`, `--permission-mode acceptEdits`, `--mode=auto`) so Executors can edit project files without blocking on `[y/N]` prompts—while still guarding against destructive system commands (tests & `git commit` are verified by the Planner). If you want Claude Code as Executor to also run specific test commands, add `--allowedTools "Read,Edit,Bash(npm test:*)"` or configure `.claude/settings.json`.
+> **Non-Interactive Executor Permissions (`safe` vs `yolo`):**
+> Because `batonflow` invokes Executor CLIs headlessly (`stdin` closed), Executors cannot pause for interactive `[y/N]` prompts. `batonflow` provides two built-in permission presets you can switch anytime with a single command:
+>
+> | Executor | `safe` Mode (Default — Local Dev) | Scope | `yolo` Mode (Isolated Containers / VMs ONLY) |
+> | :--- | :--- | :--- | :--- |
+> | **Codex CLI** | `--sandbox workspace-write` | Read/write **current workspace only**; protects system files & `.git` | `--yolo` |
+> | **Claude Code** | `--permission-mode acceptEdits` | Auto-allows workspace reads/edits; add `--allowedTools "Read,Edit,Bash(npm test:*)"` if needed | `--dangerously-skip-permissions` |
+> | **Gemini 4 (`agy`)** | `--mode=auto` | Auto-runs routine workspace edits while guarding destructive actions | `--dangerously-skip-permissions` |
+>
+> Switch modes anytime (preserves your custom models, policies, and third-party executors):
+> ```bash
+> # Initialize directly in isolated container/VM full-bypass mode:
+> batonflow init --permission-mode yolo
+>
+> # Or switch an existing project anytime:
+> batonflow mode yolo    # WARNING: use ONLY in isolated Docker containers, ephemeral VMs, or CI
+> batonflow mode safe    # Switch back to scoped workspace-write defaults
+> ```
 >
 > **Reasoning / Thinking Effort (`--effort`):** Supports `low`, `medium`, `high`, `xhigh`, and `max`. When omitted, `batonflow` uses `default_effort[tier]` (`high` → `high`, `low` → `medium`). Use `effort_map` to safely downgrade unsupported levels during failover (e.g., mapping `max` → `xhigh` for `agy` / Gemini 4).
 >
@@ -182,8 +199,9 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 
 | Command / Flag | Description |
 | :--- | :--- |
-| `init [dir] [--adapter ...] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
+| `init [dir] [--adapter ...] [--permission-mode safe\|yolo] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
 | `init --global-skill [target] [--force]` | Install the universal Skill globally (`all` / `antigravity` / `claude-code` / `codex`) without creating project files |
+| `mode <safe\|yolo> [--config <path>]` | Switch `codex`/`claude`/`gemini` commands in `batonflow.config.json` between `safe` (workspace-write) and `yolo` (container full-bypass) |
 | `--tier <high\|low>` | Capability tier to route (required for task dispatch) |
 | `--effort <level>` | Reasoning/thinking effort: `low \| medium \| high \| xhigh \| max` (optional; defaults to `default_effort[tier]`) |
 | `--task "<text>"` | Inline task prompt |
