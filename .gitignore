@@ -1,6 +1,6 @@
-# CodeBaton runtime artifacts (logs & cooldown state)
+# CodeBaton runtime artifacts (logs & cooldown/mock state)
 .codebaton/logs/
-.codebaton/state.json
+.codebaton/*.json
 
 # User-local config (keep codebaton.config.example.json tracked)
 codebaton.config.json
