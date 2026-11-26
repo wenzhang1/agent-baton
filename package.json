@@ -1,6 +1,6 @@
 {
   "name": "batonflow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pass the coding baton across any AI CLI—with automatic failover and zero lost context.",
   "type": "module",
   "bin": {
