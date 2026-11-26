@@ -1,13 +1,33 @@
 {
-  "name": "codebaton",
+  "name": "agent-baton",
   "version": "0.1.0",
   "description": "Pass the coding baton across any AI CLI—with automatic failover and zero lost context.",
   "type": "module",
   "bin": {
-    "codebaton": "./bin/codebaton"
+    "agent-baton": "./bin/agent-baton"
   },
+  "files": [
+    "bin/",
+    "lib/",
+    "templates/",
+    "adapters/",
+    "scripts/",
+    "tests/mock-executor.mjs",
+    "agent-baton.config.example.json",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
   "scripts": {
     "test": "node tests/run-tests.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wenzhang1/agent-baton.git"
+  },
+  "homepage": "https://github.com/wenzhang1/agent-baton#readme",
+  "bugs": {
+    "url": "https://github.com/wenzhang1/agent-baton/issues"
   },
   "keywords": [
     "ai",
@@ -23,6 +43,9 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {}
 }

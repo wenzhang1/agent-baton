@@ -1,0 +1,65 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify before publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          TAG_NAME="${GITHUB_REF_NAME}"
+          echo "package.json version: ${PKG_VERSION}"
+          echo "git tag / release:    ${TAG_NAME}"
+          if [ "${PKG_VERSION}" != "${TAG_NAME}" ]; then
+            echo "ERROR: Tag (${TAG_NAME}) does not match package.json version (${PKG_VERSION})." >&2
+            exit 1
+          fi
+
+      - name: Run full test suite
+        run: node tests/run-tests.mjs
+
+      - name: Verify npm package contents
+        run: npm pack --dry-run
+
+  publish:
+    name: Publish package to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    # Protected environment with Required Reviewers (Settings -> Environments -> npm-release)
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js with npm registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish with npm provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -63,6 +63,6 @@
     "weekly_limit": 3600
   },
   "timeout_seconds": 15,
-  "log_dir": ".codebaton/test-logs",
-  "state_file": ".codebaton/test-state.json"
+  "log_dir": ".agent-baton/test-logs",
+  "state_file": ".agent-baton/test-state.json"
 }

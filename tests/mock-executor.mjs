@@ -1,18 +1,8 @@
 #!/usr/bin/env node
 /**
- * Programmable Mock AI CLI Executor for zero-API-cost testing of codebaton.
+ * Programmable Mock AI CLI Executor for zero-API-cost testing of agent-baton.
  *
- * Controlled via CODEBATON_MOCK_BEHAVIOR="codex:short_limit,claude:ok,gemini:weekly_limit"
- * Supported modes per executor:
- *   - ok               : succeeds (exit 0) and echoes executor/model/task/env metadata
- *   - short_limit      : fails (exit 1) with 429 / 5-hour rolling window error
- *   - short_limit_fast : fails (exit 1) with "try again in 1 second" 429 error
- *   - short_limit_once : fails with 1s 429 on first call, succeeds on second call
- *   - weekly_limit     : fails (exit 1) with weekly usage limit error
- *   - quota_exceeded   : fails (exit 1) with insufficient_quota / billing error
- *   - error            : fails (exit 1) with normal code error (no rate-limit keywords)
- *   - hang             : sleeps 10 seconds (used to verify timeout termination)
- *   - try_nested       : attempts to invoke bin/codebaton nested (verifies recursion guard)
+ * Controlled via AGENT_BATON_MOCK_BEHAVIOR="codex:short_limit,claude:ok,gemini:weekly_limit"
  */
 
 import { spawnSync } from 'node:child_process';
@@ -22,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const BIN_PATH = path.resolve(__dirname, '..', 'bin', 'codebaton');
+const BIN_PATH = path.resolve(__dirname, '..', 'bin', 'agent-baton');
 
 function parseSimpleArgs(argv) {
   const out = { executor: 'unknown', model: 'unknown', task: '' };
@@ -35,7 +25,7 @@ function parseSimpleArgs(argv) {
 }
 
 function getBehavior(executor) {
-  const raw = process.env.CODEBATON_MOCK_BEHAVIOR || '';
+  const raw = process.env.AGENT_BATON_MOCK_BEHAVIOR || '';
   for (const entry of raw.split(',')) {
     const [name, mode] = entry.split(':').map((s) => s.trim());
     if (name === executor && mode) {
@@ -46,7 +36,7 @@ function getBehavior(executor) {
 }
 
 function incrementCallCount(executor) {
-  const counterFile = process.env.CODEBATON_MOCK_STATE_FILE;
+  const counterFile = process.env.AGENT_BATON_MOCK_STATE_FILE;
   if (!counterFile) return 1;
   let data = {};
   try {
@@ -75,8 +65,8 @@ switch (mode) {
         executor: args.executor,
         model: args.model,
         callCount,
-        role: process.env.CODEBATON_ROLE || null,
-        depth: process.env.CODEBATON_DEPTH || null,
+        role: process.env.AGENT_BATON_ROLE || null,
+        depth: process.env.AGENT_BATON_DEPTH || null,
         task: args.task,
       })
     );

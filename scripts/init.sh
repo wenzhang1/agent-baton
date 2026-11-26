@@ -1,39 +1,37 @@
 #!/usr/bin/env bash
 #
-# scripts/init.sh - Safely initialize CodeBaton into any target repository.
+# scripts/init.sh - Safely initialize agent-baton into any target repository.
+#
+# Tip: Once installed via npm (`npm install -g agent-baton`), you can simply run:
+#   cd /path/to/your-project && agent-baton init
 #
 # Usage:
-#   ./scripts/init.sh <target-dir> [--adapter antigravity|claude-code|all|none] [--force]
-#
-# Safety guarantees:
-#   - Never overwrites existing codebaton.config.json, PLAN.md, or .claude/settings.json
-#     unless --force is explicitly passed.
-#   - Never overwrites existing CLAUDE.md; appends/updates an idempotent marker block
-#     (<!-- codebaton:start --> ... <!-- codebaton:end -->) while preserving all existing rules.
+#   ./scripts/init.sh [target-dir] [--adapter antigravity|claude-code|all|none] [--force]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-TARGET_DIR=""
+TARGET_DIR="."
 ADAPTER="all"
 FORCE=0
+POSITIONAL_SET=0
 
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/init.sh <target-project-dir> [options]
+  ./scripts/init.sh [target-project-dir] [options]
 
 Options:
   --adapter <mode>   Adapter templates to install: antigravity | claude-code | all | none (default: all)
-  --force            Overwrite existing codebaton.config.json, PLAN.md, and adapter files
+  --force            Overwrite existing agent-baton.config.json, PLAN.md, and adapter files
   -h, --help         Show this help message
 
 Examples:
   ./scripts/init.sh ~/projects/my-app
   ./scripts/init.sh ~/projects/my-app --adapter antigravity
-  ./scripts/init.sh ~/projects/my-app --adapter claude-code
+  ./scripts/init.sh --adapter claude-code   # initializes current directory
 EOF
 }
 
@@ -61,8 +59,9 @@ while [[ $# -gt 0 ]]; do
       exit 1
       ;;
     *)
-      if [[ -z "${TARGET_DIR}" ]]; then
+      if [[ "${POSITIONAL_SET}" -eq 0 ]]; then
         TARGET_DIR="$1"
+        POSITIONAL_SET=1
       else
         echo "Error: Unexpected positional argument: $1" >&2
         exit 1
@@ -71,12 +70,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
-if [[ -z "${TARGET_DIR}" ]]; then
-  echo "Error: Please provide a target project directory." >&2
-  usage
-  exit 1
-fi
 
 case "${ADAPTER}" in
   antigravity|claude-code|all|none) ;;
@@ -117,17 +110,16 @@ append_gitignore_entry() {
 merge_claude_md_snippet() {
   local target_file="${TARGET_DIR}/CLAUDE.md"
   local snippet_file="${REPO_ROOT}/adapters/claude-code/CLAUDE.md.snippet"
-  local start_marker="<!-- codebaton:start -->"
-  local end_marker="<!-- codebaton:end -->"
+  local start_marker="<!-- agent-baton:start -->"
+  local end_marker="<!-- agent-baton:end -->"
 
   if [[ ! -f "${target_file}" ]]; then
     cp "${snippet_file}" "${target_file}"
-    echo "  [write]  CLAUDE.md (created with CodeBaton snippet)"
+    echo "  [write]  CLAUDE.md (created with agent-baton snippet)"
     return
   fi
 
   if grep -Fq "${start_marker}" "${target_file}"; then
-    # Replace existing marker block in place while preserving surrounding content.
     local tmp_file
     tmp_file="$(mktemp)"
     awk -v start="${start_marker}" -v end="${end_marker}" -v sfile="${snippet_file}" '
@@ -144,29 +136,26 @@ merge_claude_md_snippet() {
       !skip { print }
     ' "${target_file}" > "${tmp_file}"
     mv "${tmp_file}" "${target_file}"
-    echo "  [update] CLAUDE.md (updated CodeBaton marker block; existing rules preserved)"
+    echo "  [update] CLAUDE.md (updated agent-baton marker block; existing rules preserved)"
   else
     printf '\n' >> "${target_file}"
     cat "${snippet_file}" >> "${target_file}"
-    echo "  [append] CLAUDE.md (appended CodeBaton block; existing rules preserved)"
+    echo "  [append] CLAUDE.md (appended agent-baton block; existing rules preserved)"
   fi
 }
 
-echo "Initializing CodeBaton in: ${TARGET_DIR}"
+echo "Initializing agent-baton in: ${TARGET_DIR}"
 echo ""
 
-# 1. Core config, workflow, and task board
-copy_safe "${REPO_ROOT}/codebaton.config.example.json" "${TARGET_DIR}/codebaton.config.json" "codebaton.config.json"
-copy_safe "${REPO_ROOT}/templates/WORKFLOW.md" "${TARGET_DIR}/.codebaton/WORKFLOW.md" ".codebaton/WORKFLOW.md"
+copy_safe "${REPO_ROOT}/agent-baton.config.example.json" "${TARGET_DIR}/agent-baton.config.json" "agent-baton.config.json"
+copy_safe "${REPO_ROOT}/templates/WORKFLOW.md" "${TARGET_DIR}/.agent-baton/WORKFLOW.md" ".agent-baton/WORKFLOW.md"
 copy_safe "${REPO_ROOT}/templates/PLAN.md" "${TARGET_DIR}/PLAN.md" "PLAN.md"
 
-# 2. Ensure runtime logs and state are gitignored
-append_gitignore_entry ".codebaton/logs/"
-append_gitignore_entry ".codebaton/state.json"
+append_gitignore_entry ".agent-baton/logs/"
+append_gitignore_entry ".agent-baton/*.json"
 
-# 3. Install selected adapters
 if [[ "${ADAPTER}" == "antigravity" || "${ADAPTER}" == "all" ]]; then
-  copy_safe "${REPO_ROOT}/adapters/antigravity/rules.md" "${TARGET_DIR}/.agent/rules/codebaton.md" ".agent/rules/codebaton.md"
+  copy_safe "${REPO_ROOT}/adapters/antigravity/rules.md" "${TARGET_DIR}/.agent/rules/agent-baton.md" ".agent/rules/agent-baton.md"
 fi
 
 if [[ "${ADAPTER}" == "claude-code" || "${ADAPTER}" == "all" ]]; then
@@ -182,7 +171,6 @@ fi
 
 echo ""
 echo "Done! Next steps:"
-echo "  1. Link codebaton globally (once):  cd ${REPO_ROOT} && npm link"
-echo "  2. Customize models & policies in:  ${TARGET_DIR}/codebaton.config.json"
-echo "  3. Fill in your tasks in:           ${TARGET_DIR}/PLAN.md"
-echo "  4. Dry-run verify:                  cd ${TARGET_DIR} && codebaton --dry-run --tier high --task \"Verify setup\""
+echo "  1. Customize models & policies in:  ${TARGET_DIR}/agent-baton.config.json"
+echo "  2. Fill in your tasks in:           ${TARGET_DIR}/PLAN.md"
+echo "  3. Dry-run verify:                  cd ${TARGET_DIR} && agent-baton --dry-run --tier high --task \"Verify setup\""

@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Run zero-dependency mock test suite
+      - name: Run zero-dependency mock & init test suite
         run: node tests/run-tests.mjs
 
       - name: Smoke test scripts/init.sh idempotency
@@ -35,10 +35,10 @@ jobs:
           ./scripts/init.sh "$TMPDIR_INIT" --adapter all
           ./scripts/init.sh "$TMPDIR_INIT" --adapter all
           grep -q "Existing Rules" "$TMPDIR_INIT/CLAUDE.md"
-          grep -q "<!-- codebaton:start -->" "$TMPDIR_INIT/CLAUDE.md"
-          test -f "$TMPDIR_INIT/codebaton.config.json"
-          test -f "$TMPDIR_INIT/.codebaton/WORKFLOW.md"
+          grep -q "<!-- agent-baton:start -->" "$TMPDIR_INIT/CLAUDE.md"
+          test -f "$TMPDIR_INIT/agent-baton.config.json"
+          test -f "$TMPDIR_INIT/.agent-baton/WORKFLOW.md"
           test -f "$TMPDIR_INIT/PLAN.md"
-          test -f "$TMPDIR_INIT/.agent/rules/codebaton.md"
+          test -f "$TMPDIR_INIT/.agent/rules/agent-baton.md"
           test -f "$TMPDIR_INIT/.claude/settings.json"
           rm -rf "$TMPDIR_INIT"
