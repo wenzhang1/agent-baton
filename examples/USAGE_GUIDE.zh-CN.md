@@ -1,8 +1,8 @@
-# batonflow 实战使用与 Antigravity Skill 指南
+# batonflow 实战使用与全客户端通用 Skill 指南
 
 [English](USAGE_GUIDE.md) | 简体中文
 
-本文通过完整实战场景，演示如何从零安装 **`batonflow`**、配置 **Antigravity Skill**，以及如何在对话中实现自动多 CLI 接力、5 小时/周限额容灾与跨客户端断点续传。
+本文通过完整实战场景，演示如何从零安装 **`batonflow`**、配置**全客户端通用 Agent Skill**（`skills/batonflow/SKILL.md`，原生支持 **Antigravity、Claude Code、Codex CLI、Gemini CLI、Cursor 与 OpenCode**），以及如何在对话中实现自动多 CLI 接力、5 小时/周限额容灾与跨客户端断点续传。
 
 ---
 
@@ -14,8 +14,14 @@ npm install -g batonflow
 batonflow --version
 ```
 
-### 选择 Antigravity Skill 的安装方式
-Antigravity Skill 采用**渐进式加载（Progressive Disclosure）**——平时只占用极简的 `name` + `description`，不会干扰日常对话，只有涉及 `batonflow` / `PLAN.md` 接力任务时才会激活。支持两种方式：
+### 选择通用 `batonflow` Skill 的安装方式
+`skills/batonflow/SKILL.md` 遵循开放的 **Agent Skills** 标准（渐进式加载）——平时只占用极简的 `name` + `description`，不会干扰日常对话，只有涉及 `batonflow` / `PLAN.md` 接力任务时才会激活：
+
+| AI 客户端 | 项目级 Skill 路径（`batonflow init`） | 全局级 Skill 路径（`batonflow init --global-skill`） |
+| :--- | :--- | :--- |
+| **Antigravity** | `.agents/skills/batonflow/SKILL.md` | `~/.gemini/config/skills/batonflow/SKILL.md` |
+| **Codex / Gemini CLI / Cursor / OpenCode** | `.agents/skills/batonflow/SKILL.md` | `~/.agents/skills/batonflow/SKILL.md` |
+| **Claude Code** | `.claude/skills/batonflow/SKILL.md` | `~/.claude/skills/batonflow/SKILL.md` |
 
 1. **项目级 Skill（运行 `batonflow init` 自动生成，推荐团队共享）**
    ```bash
@@ -23,16 +29,19 @@ Antigravity Skill 采用**渐进式加载（Progressive Disclosure）**——平
    batonflow init
    ```
    会自动在项目中创建：
-   - `.agents/skills/batonflow/SKILL.md`（Antigravity 项目级 Skill）
-   - `.agent/rules/batonflow.md`（Antigravity 工作区规则）
+   - `.agents/skills/batonflow/SKILL.md`（Antigravity / Codex / Gemini CLI / Cursor / OpenCode 通用 Skill）与 `.agent/rules/batonflow.md`
+   - `.claude/skills/batonflow/SKILL.md`（Claude Code `/batonflow` Skill）、`CLAUDE.md`（锚点无损追加）与 `.claude/settings.json`
    - `batonflow.config.json`、`.batonflow/WORKFLOW.md`、`PLAN.md`
-   - `CLAUDE.md`（锚点无损追加，保留原有规则）与 `.claude/settings.json`
 
-2. **全局级 Skill（一次安装，本机所有项目通用）**
+2. **全局级 Skill（一次安装，本机所有项目与客户端通用）**
    ```bash
+   # 一次性安装到全部客户端（Antigravity + Claude Code + Codex/通用目录）：
    batonflow init --global-skill
+
+   # 或仅安装到指定客户端：
+   batonflow init --global-skill claude-code
    ```
-   仅将 Skill 写入 `~/.gemini/config/skills/batonflow/SKILL.md`，**不会在当前目录生成任何项目文件**。之后在具体需要接力的项目里，仍需运行一次 `batonflow init` 生成 `batonflow.config.json` 和 `PLAN.md`。
+   仅写入全局 `SKILL.md`，**不会在当前目录生成任何项目文件**。之后在具体需要接力的项目里，仍需运行一次 `batonflow init` 生成 `batonflow.config.json` 和 `PLAN.md`。
 
 ### 核对 `batonflow.config.json` 并演练验证
 在 `executor_chain` 中只保留你本机实际已安装并登录的 AI CLI：

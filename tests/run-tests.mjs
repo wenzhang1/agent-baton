@@ -375,11 +375,14 @@ test('17. `batonflow init` initializes current working directory with zero args'
   assert.ok(fs.existsSync(path.join(dir, 'PLAN.md')));
   assert.ok(fs.existsSync(path.join(dir, '.agents', 'skills', 'batonflow', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(dir, '.agent', 'rules', 'batonflow.md')));
+  assert.ok(fs.existsSync(path.join(dir, '.claude', 'skills', 'batonflow', 'SKILL.md')));
   assert.ok(fs.existsSync(path.join(dir, 'CLAUDE.md')));
   assert.ok(fs.existsSync(path.join(dir, '.claude', 'settings.json')));
 
   const skillContent = fs.readFileSync(path.join(dir, '.agents', 'skills', 'batonflow', 'SKILL.md'), 'utf8');
   assert.match(skillContent, /^---\nname: batonflow\n/);
+  const claudeSkillContent = fs.readFileSync(path.join(dir, '.claude', 'skills', 'batonflow', 'SKILL.md'), 'utf8');
+  assert.equal(claudeSkillContent, skillContent);
 
   const gitignore = fs.readFileSync(path.join(dir, '.gitignore'), 'utf8');
   assert.match(gitignore, /\.batonflow\/logs\//);
@@ -408,51 +411,68 @@ test('18. `batonflow init` preserves existing CLAUDE.md and updates marker block
   assert.equal(startMatches.length, 1, 'Marker block should appear exactly once after repeated init');
 });
 
-test('19. `batonflow init --adapter antigravity` installs only Antigravity skill & rule', () => {
-  const dir = path.join(tmpBase, 'init-antigravity-only');
-  fs.mkdirSync(dir, { recursive: true });
+test('19. `batonflow init --adapter <client>` installs only the selected client skill & adapter', () => {
+  const dirAgy = path.join(tmpBase, 'init-antigravity-only');
+  fs.mkdirSync(dirAgy, { recursive: true });
 
-  const res = runBatonflow(['init', '--adapter', 'antigravity'], { cwd: dir });
-  assert.equal(res.status, 0, res.stderr);
-  assert.ok(fs.existsSync(path.join(dir, '.agents', 'skills', 'batonflow', 'SKILL.md')));
-  assert.ok(fs.existsSync(path.join(dir, '.agent', 'rules', 'batonflow.md')));
-  assert.ok(!fs.existsSync(path.join(dir, 'CLAUDE.md')));
-  assert.ok(!fs.existsSync(path.join(dir, '.claude', 'settings.json')));
+  const resAgy = runBatonflow(['init', '--adapter', 'antigravity'], { cwd: dirAgy });
+  assert.equal(resAgy.status, 0, resAgy.stderr);
+  assert.ok(fs.existsSync(path.join(dirAgy, '.agents', 'skills', 'batonflow', 'SKILL.md')));
+  assert.ok(fs.existsSync(path.join(dirAgy, '.agent', 'rules', 'batonflow.md')));
+  assert.ok(!fs.existsSync(path.join(dirAgy, 'CLAUDE.md')));
+  assert.ok(!fs.existsSync(path.join(dirAgy, '.claude', 'skills', 'batonflow', 'SKILL.md')));
+
+  const dirClaude = path.join(tmpBase, 'init-claude-only');
+  fs.mkdirSync(dirClaude, { recursive: true });
+
+  const resClaude = runBatonflow(['init', '--adapter', 'claude-code'], { cwd: dirClaude });
+  assert.equal(resClaude.status, 0, resClaude.stderr);
+  assert.ok(fs.existsSync(path.join(dirClaude, '.claude', 'skills', 'batonflow', 'SKILL.md')));
+  assert.ok(fs.existsSync(path.join(dirClaude, 'CLAUDE.md')));
+  assert.ok(fs.existsSync(path.join(dirClaude, '.claude', 'settings.json')));
+  assert.ok(!fs.existsSync(path.join(dirClaude, '.agent', 'rules', 'batonflow.md')));
 });
 
-test('20. `batonflow init --global-skill` installs global SKILL.md without creating project files', () => {
+test('20. `batonflow init --global-skill [target]` installs universal SKILL.md without creating project files', () => {
   const cwdDir = path.join(tmpBase, 'init-global-cwd');
-  const globalDir = path.join(tmpBase, 'fake-global-skill');
+  const fakeHome = path.join(tmpBase, 'fake-home');
   fs.mkdirSync(cwdDir, { recursive: true });
+  fs.mkdirSync(fakeHome, { recursive: true });
 
+  // Default `all` installs to all 3 standard global client paths
   const res = runBatonflow(['init', '--global-skill'], {
     cwd: cwdDir,
-    env: { BATONFLOW_GLOBAL_SKILL_DIR: globalDir },
+    env: { BATONFLOW_HOME: fakeHome },
   });
   assert.equal(res.status, 0, res.stderr);
 
-  const skillPath = path.join(globalDir, 'SKILL.md');
-  assert.ok(fs.existsSync(skillPath));
-  assert.match(fs.readFileSync(skillPath, 'utf8'), /^---\nname: batonflow\n/);
+  const universalSkill = path.join(fakeHome, '.agents', 'skills', 'batonflow', 'SKILL.md');
+  const agySkill = path.join(fakeHome, '.gemini', 'config', 'skills', 'batonflow', 'SKILL.md');
+  const claudeSkill = path.join(fakeHome, '.claude', 'skills', 'batonflow', 'SKILL.md');
+
+  for (const p of [universalSkill, agySkill, claudeSkill]) {
+    assert.ok(fs.existsSync(p), `Expected global skill at ${p}`);
+    assert.match(fs.readFileSync(p, 'utf8'), /^---\nname: batonflow\n/);
+  }
   // Must NOT pollute cwd with project files
   assert.ok(!fs.existsSync(path.join(cwdDir, 'PLAN.md')));
   assert.ok(!fs.existsSync(path.join(cwdDir, 'batonflow.config.json')));
 
-  // Re-run without --force skips overwriting customized skill; --force overwrites
-  fs.writeFileSync(skillPath, 'custom-skill', 'utf8');
-  const r2 = runBatonflow(['init', '--global-skill'], {
+  // Targeted `--global-skill claude-code` respects existing file unless `--force` is passed
+  fs.writeFileSync(claudeSkill, 'custom-claude-skill', 'utf8');
+  const r2 = runBatonflow(['init', '--global-skill', 'claude-code'], {
     cwd: cwdDir,
-    env: { BATONFLOW_GLOBAL_SKILL_DIR: globalDir },
+    env: { BATONFLOW_HOME: fakeHome },
   });
   assert.equal(r2.status, 0, r2.stderr);
-  assert.equal(fs.readFileSync(skillPath, 'utf8'), 'custom-skill');
+  assert.equal(fs.readFileSync(claudeSkill, 'utf8'), 'custom-claude-skill');
 
-  const r3 = runBatonflow(['init', '--global-skill', '--force'], {
+  const r3 = runBatonflow(['init', '--global-skill', 'claude-code', '--force'], {
     cwd: cwdDir,
-    env: { BATONFLOW_GLOBAL_SKILL_DIR: globalDir },
+    env: { BATONFLOW_HOME: fakeHome },
   });
   assert.equal(r3.status, 0, r3.stderr);
-  assert.match(fs.readFileSync(skillPath, 'utf8'), /^---\nname: batonflow\n/);
+  assert.match(fs.readFileSync(claudeSkill, 'utf8'), /^---\nname: batonflow\n/);
 });
 
 // Run all tests

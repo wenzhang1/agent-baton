@@ -1,8 +1,8 @@
-# batonflow End-to-End Usage & Antigravity Skill Guide
+# batonflow End-to-End Usage & Universal Agent Skill Guide
 
 English | [简体中文](USAGE_GUIDE.zh-CN.md)
 
-This guide walks through real-world usage of **`batonflow`** and its built-in **Antigravity Skill**—from initial setup to automatic multi-CLI failover, 5-hour vs. weekly quota handling, and cross-client checkpoint resume.
+This guide walks through real-world usage of **`batonflow`** and its built-in **universal Agent Skill** (`skills/batonflow/SKILL.md`, compatible with **Antigravity, Claude Code, Codex CLI, Gemini CLI, Cursor, and OpenCode**)—from initial setup to automatic multi-CLI failover, 5-hour vs. weekly quota handling, and cross-client checkpoint resume.
 
 ---
 
@@ -14,8 +14,14 @@ npm install -g batonflow
 batonflow --version
 ```
 
-### Choose how Antigravity loads the `batonflow` Skill
-You have two options (both use Antigravity's **Progressive Disclosure**, so normal chats are never slowed down or hijacked):
+### Choose how your AI clients load the universal `batonflow` Skill
+`skills/batonflow/SKILL.md` follows the open **Agent Skills** standard (progressive disclosure), so normal chats are never slowed down or hijacked:
+
+| AI Client | Project-Level Skill Path (`batonflow init`) | Global Skill Path (`batonflow init --global-skill`) |
+| :--- | :--- | :--- |
+| **Antigravity** | `.agents/skills/batonflow/SKILL.md` | `~/.gemini/config/skills/batonflow/SKILL.md` |
+| **Codex / Gemini CLI / Cursor / OpenCode** | `.agents/skills/batonflow/SKILL.md` | `~/.agents/skills/batonflow/SKILL.md` |
+| **Claude Code** | `.claude/skills/batonflow/SKILL.md` | `~/.claude/skills/batonflow/SKILL.md` |
 
 1. **Project-level Skill (Automatic with `batonflow init`)**
    ```bash
@@ -23,16 +29,19 @@ You have two options (both use Antigravity's **Progressive Disclosure**, so norm
    batonflow init
    ```
    This automatically creates:
-   - `.agents/skills/batonflow/SKILL.md` (Antigravity Workspace Skill)
-   - `.agent/rules/batonflow.md` (Antigravity Workspace Rule)
+   - `.agents/skills/batonflow/SKILL.md` (Universal Agent Skill for Antigravity / Codex / Gemini CLI / Cursor / OpenCode) & `.agent/rules/batonflow.md`
+   - `.claude/skills/batonflow/SKILL.md` (Claude Code `/batonflow` Skill), `CLAUDE.md` (idempotent marker append), & `.claude/settings.json`
    - `batonflow.config.json`, `.batonflow/WORKFLOW.md`, `PLAN.md`
-   - `CLAUDE.md` (idempotent marker append) & `.claude/settings.json`
 
-2. **Global Skill (One-time install for all repos on your machine)**
+2. **Global Skill (One-time install for all repos & clients on your machine)**
    ```bash
+   # Install for all clients (Antigravity + Claude Code + Codex/Universal):
    batonflow init --global-skill
+
+   # Or install for a single client only:
+   batonflow init --global-skill claude-code
    ```
-   This installs `~/.gemini/config/skills/batonflow/SKILL.md` without creating any project files in your current directory. Inside each repository you want to orchestrate, you still run `batonflow init` once to create `batonflow.config.json` and `PLAN.md`.
+   This installs global `SKILL.md` files without creating any project files in your current directory. Inside each repository you want to orchestrate, you still run `batonflow init` once to create `batonflow.config.json` and `PLAN.md`.
 
 ### Customize `batonflow.config.json` & Verify
 Keep only the AI CLIs you actually have installed and signed into in `executor_chain`:
