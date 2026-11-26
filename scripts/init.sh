@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# scripts/init.sh - Safely initialize agent-baton into any target repository.
+# scripts/init.sh - Safely initialize batonflow into any target repository.
 #
-# Tip: Once installed via npm (`npm install -g agent-baton`), you can simply run:
-#   cd /path/to/your-project && agent-baton init
+# Tip: Once installed via npm (`npm install -g batonflow`), you can simply run:
+#   cd /path/to/your-project && batonflow init
 #
 # Usage:
 #   ./scripts/init.sh [target-dir] [--adapter antigravity|claude-code|all|none] [--force]
@@ -25,7 +25,7 @@ Usage:
 
 Options:
   --adapter <mode>   Adapter templates to install: antigravity | claude-code | all | none (default: all)
-  --force            Overwrite existing agent-baton.config.json, PLAN.md, and adapter files
+  --force            Overwrite existing batonflow.config.json, PLAN.md, and adapter files
   -h, --help         Show this help message
 
 Examples:
@@ -110,12 +110,12 @@ append_gitignore_entry() {
 merge_claude_md_snippet() {
   local target_file="${TARGET_DIR}/CLAUDE.md"
   local snippet_file="${REPO_ROOT}/adapters/claude-code/CLAUDE.md.snippet"
-  local start_marker="<!-- agent-baton:start -->"
-  local end_marker="<!-- agent-baton:end -->"
+  local start_marker="<!-- batonflow:start -->"
+  local end_marker="<!-- batonflow:end -->"
 
   if [[ ! -f "${target_file}" ]]; then
     cp "${snippet_file}" "${target_file}"
-    echo "  [write]  CLAUDE.md (created with agent-baton snippet)"
+    echo "  [write]  CLAUDE.md (created with batonflow snippet)"
     return
   fi
 
@@ -136,26 +136,26 @@ merge_claude_md_snippet() {
       !skip { print }
     ' "${target_file}" > "${tmp_file}"
     mv "${tmp_file}" "${target_file}"
-    echo "  [update] CLAUDE.md (updated agent-baton marker block; existing rules preserved)"
+    echo "  [update] CLAUDE.md (updated batonflow marker block; existing rules preserved)"
   else
     printf '\n' >> "${target_file}"
     cat "${snippet_file}" >> "${target_file}"
-    echo "  [append] CLAUDE.md (appended agent-baton block; existing rules preserved)"
+    echo "  [append] CLAUDE.md (appended batonflow block; existing rules preserved)"
   fi
 }
 
-echo "Initializing agent-baton in: ${TARGET_DIR}"
+echo "Initializing batonflow in: ${TARGET_DIR}"
 echo ""
 
-copy_safe "${REPO_ROOT}/agent-baton.config.example.json" "${TARGET_DIR}/agent-baton.config.json" "agent-baton.config.json"
-copy_safe "${REPO_ROOT}/templates/WORKFLOW.md" "${TARGET_DIR}/.agent-baton/WORKFLOW.md" ".agent-baton/WORKFLOW.md"
+copy_safe "${REPO_ROOT}/batonflow.config.example.json" "${TARGET_DIR}/batonflow.config.json" "batonflow.config.json"
+copy_safe "${REPO_ROOT}/templates/WORKFLOW.md" "${TARGET_DIR}/.batonflow/WORKFLOW.md" ".batonflow/WORKFLOW.md"
 copy_safe "${REPO_ROOT}/templates/PLAN.md" "${TARGET_DIR}/PLAN.md" "PLAN.md"
 
-append_gitignore_entry ".agent-baton/logs/"
-append_gitignore_entry ".agent-baton/*.json"
+append_gitignore_entry ".batonflow/logs/"
+append_gitignore_entry ".batonflow/*.json"
 
 if [[ "${ADAPTER}" == "antigravity" || "${ADAPTER}" == "all" ]]; then
-  copy_safe "${REPO_ROOT}/adapters/antigravity/rules.md" "${TARGET_DIR}/.agent/rules/agent-baton.md" ".agent/rules/agent-baton.md"
+  copy_safe "${REPO_ROOT}/adapters/antigravity/rules.md" "${TARGET_DIR}/.agent/rules/batonflow.md" ".agent/rules/batonflow.md"
 fi
 
 if [[ "${ADAPTER}" == "claude-code" || "${ADAPTER}" == "all" ]]; then
@@ -171,6 +171,6 @@ fi
 
 echo ""
 echo "Done! Next steps:"
-echo "  1. Customize models & policies in:  ${TARGET_DIR}/agent-baton.config.json"
+echo "  1. Customize models & policies in:  ${TARGET_DIR}/batonflow.config.json"
 echo "  2. Fill in your tasks in:           ${TARGET_DIR}/PLAN.md"
-echo "  3. Dry-run verify:                  cd ${TARGET_DIR} && agent-baton --dry-run --tier high --task \"Verify setup\""
+echo "  3. Dry-run verify:                  cd ${TARGET_DIR} && batonflow --dry-run --tier high --task \"Verify setup\""

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Programmable Mock AI CLI Executor for zero-API-cost testing of agent-baton.
+ * Programmable Mock AI CLI Executor for zero-API-cost testing of batonflow.
  *
- * Controlled via AGENT_BATON_MOCK_BEHAVIOR="codex:short_limit,claude:ok,gemini:weekly_limit"
+ * Controlled via BATONFLOW_MOCK_BEHAVIOR="codex:short_limit,claude:ok,gemini:weekly_limit"
  */
 
 import { spawnSync } from 'node:child_process';
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const BIN_PATH = path.resolve(__dirname, '..', 'bin', 'agent-baton');
+const BIN_PATH = path.resolve(__dirname, '..', 'bin', 'batonflow');
 
 function parseSimpleArgs(argv) {
   const out = { executor: 'unknown', model: 'unknown', task: '' };
@@ -25,7 +25,7 @@ function parseSimpleArgs(argv) {
 }
 
 function getBehavior(executor) {
-  const raw = process.env.AGENT_BATON_MOCK_BEHAVIOR || '';
+  const raw = process.env.BATONFLOW_MOCK_BEHAVIOR || '';
   for (const entry of raw.split(',')) {
     const [name, mode] = entry.split(':').map((s) => s.trim());
     if (name === executor && mode) {
@@ -36,7 +36,7 @@ function getBehavior(executor) {
 }
 
 function incrementCallCount(executor) {
-  const counterFile = process.env.AGENT_BATON_MOCK_STATE_FILE;
+  const counterFile = process.env.BATONFLOW_MOCK_STATE_FILE;
   if (!counterFile) return 1;
   let data = {};
   try {
@@ -65,8 +65,8 @@ switch (mode) {
         executor: args.executor,
         model: args.model,
         callCount,
-        role: process.env.AGENT_BATON_ROLE || null,
-        depth: process.env.AGENT_BATON_DEPTH || null,
+        role: process.env.BATONFLOW_ROLE || null,
+        depth: process.env.BATONFLOW_DEPTH || null,
         task: args.task,
       })
     );

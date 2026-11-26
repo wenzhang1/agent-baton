@@ -1,5 +1,5 @@
 name: Feature Request
-description: Propose a new capability, policy option, or workflow improvement for agent-baton.
+description: Propose a new capability, policy option, or workflow improvement for batonflow.
 title: "[Feature]: "
 labels: ["enhancement"]
 body:

@@ -1,10 +1,10 @@
 {
-  "name": "agent-baton",
+  "name": "batonflow",
   "version": "0.1.0",
   "description": "Pass the coding baton across any AI CLI—with automatic failover and zero lost context.",
   "type": "module",
   "bin": {
-    "agent-baton": "./bin/agent-baton"
+    "batonflow": "./bin/batonflow"
   },
   "files": [
     "bin/",
@@ -13,7 +13,7 @@
     "adapters/",
     "scripts/",
     "tests/mock-executor.mjs",
-    "agent-baton.config.example.json",
+    "batonflow.config.example.json",
     "README.md",
     "README.zh-CN.md",
     "LICENSE"
@@ -23,11 +23,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wenzhang1/agent-baton.git"
+    "url": "git+https://github.com/wenzhang1/batonflow.git"
   },
-  "homepage": "https://github.com/wenzhang1/agent-baton#readme",
+  "homepage": "https://github.com/wenzhang1/batonflow#readme",
   "bugs": {
-    "url": "https://github.com/wenzhang1/agent-baton/issues"
+    "url": "https://github.com/wenzhang1/batonflow/issues"
   },
   "keywords": [
     "ai",

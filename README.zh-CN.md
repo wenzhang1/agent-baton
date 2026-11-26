@@ -1,4 +1,4 @@
-# agent-baton
+# batonflow
 
 **Pass the coding baton across any AI CLI—with automatic failover and zero lost context.**
 
@@ -6,15 +6,15 @@
 
 ---
 
-`agent-baton` 是一个轻量级、**零外部依赖**、与客户端完全解耦的本地多智能体（**Planner + Executor**）接力调度框架。你可以将任意支持命令行/终端调用的 AI 编码工具（如 **Antigravity / Gemini**、**Claude Code**、**Codex CLI** 或自定义脚本）自由组合为 **规划验收者（Planner）** 与 **代码执行者（Executor）**，实现：
+`batonflow` 是一个轻量级、**零外部依赖**、与客户端完全解耦的本地多智能体（**Planner + Executor**）接力调度框架。你可以将任意支持命令行/终端调用的 AI 编码工具（如 **Antigravity / Gemini**、**Claude Code**、**Codex CLI** 或自定义脚本）自由组合为 **规划验收者（Planner）** 与 **代码执行者（Executor）**，实现：
 
 - **按复杂度动态分批派发**：高风险核心逻辑单步执行，低风险强关联样板 2~3 个打包执行。
 - **按能力档位（`high` / `low`）动态路由模型**：屏蔽各家 CLI 模型命名差异，统一按档位调度。
 - **分层限流识别与自动接力**：自动区分 **5 小时滚动/短周期限流（`short_limit`）** 与 **周限额/硬配额耗尽（`weekly_limit`）**，按 `executor_chain` 顺位交接。
 - **三模式耗尽策略自由配置**：针对 5 小时限额和周限额分别支持 **`planner_takeover`（由 Planner 接手）**、**`manual_pause`（等待后手动继续）**、**`auto_wait`（时间到达自动重试继续）** 三种策略。
-- **一行命令初始化（`agent-baton init`）**：进入任意项目目录直接执行 `agent-baton init`，零冲突初始化配置、工作流、任务板与适配器。
+- **一行命令初始化（`batonflow init`）**：进入任意项目目录直接执行 `batonflow init`，零冲突初始化配置、工作流、任务板与适配器。
 - **基于 Git 与 `PLAN.md` 的跨客户端断点续传**：随时切换不同 AI 客户端无缝接着干，零上下文丢失。
-- **与项目原有 `AGENTS.md` / `CLAUDE.md` 安全共存**：三层防串台保护（幂等锚点追加、`[AGENT_BATON_EXECUTOR_MODE]` 身份前缀、硬递归环境变量锁），保留原有编码规范且杜绝死循环。
+- **与项目原有 `AGENTS.md` / `CLAUDE.md` 安全共存**：三层防串台保护（幂等锚点追加、`[BATONFLOW_EXECUTOR_MODE]` 身份前缀、硬递归环境变量锁），保留原有编码规范且杜绝死循环。
 
 ---
 
@@ -23,7 +23,7 @@
 ```mermaid
 flowchart TD
     P["Planner (Antigravity / Claude Code / 任意客户端)"] -->|"读取 PLAN.md 与 WORKFLOW.md"| B["动态分批与档位决策 (high / low)"]
-    B -->|"agent-baton --tier high --task ..."| C["agent-baton 调度器 (零依赖 Node.js)"]
+    B -->|"batonflow --tier high --task ..."| C["batonflow 调度器 (零依赖 Node.js)"]
     C -->|"首选 Executor"| E1["Codex CLI"]
     E1 -->|"退出码 0"| V["Planner 审查 git diff 并运行测试/构建"]
     E1 -->|"429 / 5小时限流 / 周限额"| E2["备用 Executor: Claude Code"]
@@ -53,57 +53,57 @@ flowchart TD
 
 ```bash
 # 方式 A：通过 npm 全局安装（推荐）
-npm install -g agent-baton
+npm install -g batonflow
 
 # 方式 B：免安装直接用 npx 初始化
-npx agent-baton init
+npx batonflow init
 
 # 方式 C：从源码直接链接（无需 npm install）
-git clone https://github.com/wenzhang1/agent-baton.git
-cd agent-baton && npm link
+git clone https://github.com/wenzhang1/batonflow.git
+cd batonflow && npm link
 ```
 
 ### 2. 进入你的项目一键初始化
 
 ```bash
 cd /path/to/your-project
-agent-baton init
-# 可选适配器：agent-baton init --adapter antigravity | claude-code | all | none
+batonflow init
+# 可选适配器：batonflow init --adapter antigravity | claude-code | all | none
 ```
 
-`agent-baton init` 会安全完成以下操作：
-- 生成 `agent-baton.config.json`（已有文件默认跳过，不覆盖）
-- 生成 `.agent-baton/WORKFLOW.md`（标准化 Planner 工作流规范）
+`batonflow init` 会安全完成以下操作：
+- 生成 `batonflow.config.json`（已有文件默认跳过，不覆盖）
+- 生成 `.batonflow/WORKFLOW.md`（标准化 Planner 工作流规范）
 - 生成 `PLAN.md`（任务板与断点恢复日志模板）
-- 安装 Antigravity 规则 `.agent/rules/agent-baton.md`
-- 以幂等锚点块（`<!-- agent-baton:start --> ... <!-- agent-baton:end -->`）追加到 `CLAUDE.md`，**100% 保留原有规则**，并按需写入 `.claude/settings.json` 权限白名单
-- 自动将 `.agent-baton/logs/` 和 `.agent-baton/*.json` 追加到 `.gitignore`
+- 安装 Antigravity 规则 `.agent/rules/batonflow.md`
+- 以幂等锚点块（`<!-- batonflow:start --> ... <!-- batonflow:end -->`）追加到 `CLAUDE.md`，**100% 保留原有规则**，并按需写入 `.claude/settings.json` 权限白名单
+- 自动将 `.batonflow/logs/` 和 `.batonflow/*.json` 追加到 `.gitignore`
 
 ### 3. 零额度消耗体验内置 Mock 接力
 
 ```bash
 # 模拟 Codex 触发 5 小时 429 限流 -> 自动接力给 Claude 执行成功（退出码 0）
-agent-baton --mock failover --tier high --task "实现 JWT 刷新中间件"
+batonflow --mock failover --tier high --task "实现 JWT 刷新中间件"
 
 # 模拟全链路触发周限额 -> 退出码 3 + next_action=planner_takeover
-agent-baton --mock weekly-limit --tier high --task "执行数据库 Schema 迁移"
+batonflow --mock weekly-limit --tier high --task "执行数据库 Schema 迁移"
 
 # 模拟 auto_wait 自动等待 1 秒后重试恢复 -> 退出码 0
-agent-baton --mock auto-wait --tier low --task "补充单元测试"
+batonflow --mock auto-wait --tier low --task "补充单元测试"
 ```
 
 ### 4. 演练检查配置（Dry Run）
 
 ```bash
 cd /path/to/your-project
-agent-baton --dry-run --tier high --task "验证执行链路与模型路由"
+batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 ```
 
 ---
 
-## 配置说明（`agent-baton.config.json`）
+## 配置说明（`batonflow.config.json`）
 
-完整示例见 [`agent-baton.config.example.json`](agent-baton.config.example.json)。
+完整示例见 [`batonflow.config.example.json`](batonflow.config.example.json)。
 
 ### 核心字段
 
@@ -134,7 +134,7 @@ agent-baton --dry-run --tier high --task "验证执行链路与模型路由"
 
 ### 5 小时限额 vs 周限额：三模式耗尽策略配置
 
-`agent-baton` 会优先匹配 `weekly_limit_patterns`（周/月/余额硬配额），再匹配 `rate_limit_patterns`（5 小时滚动窗口/429/速率限制）。全链路耗尽时，按 `exhaustion_policy` 执行：
+`batonflow` 会优先匹配 `weekly_limit_patterns`（周/月/余额硬配额），再匹配 `rate_limit_patterns`（5 小时滚动窗口/429/速率限制）。全链路耗尽时，按 `exhaustion_policy` 执行：
 
 ```json
 "exhaustion_policy": {
@@ -169,7 +169,7 @@ agent-baton --dry-run --tier high --task "验证执行链路与模型路由"
 | `--config <路径>` | 指定自定义配置文件路径 |
 | `--dry-run` | 仅打印解析后的链路、模型与命令，不实际执行 |
 | `--mock [场景]` | 内置零消耗模拟（`failover`、`success`、`short-limit`、`weekly-limit`、`error`、`auto-wait`） |
-| `--status` | 查看当前冷却状态（`.agent-baton/state.json`）与策略配置 |
+| `--status` | 查看当前冷却状态（`.batonflow/state.json`）与策略配置 |
 | `--reset-state` | 清空已记录的冷却期状态 |
 | `--ignore-cooldown` | 本次执行忽略冷却期限制 |
 | `--no-prefix` | 本次执行不附加 `executor_prompt_prefix` |
@@ -184,18 +184,18 @@ agent-baton --dry-run --tier high --task "验证执行链路与模型路由"
 退出码为 `2` 或 `3` 时，`stderr` 末尾会输出标准化的结构指令，供任意 Planner 精确解析：
 
 ```text
-[agent-baton] RESULT exit=3 limit_type=weekly_limit next_action=planner_takeover reset_hint="resets on Monday" executors=codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit
+[batonflow] RESULT exit=3 limit_type=weekly_limit next_action=planner_takeover reset_hint="resets on Monday" executors=codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit
 ```
 
 ---
 
 ## 与现有 `AGENTS.md` / `CLAUDE.md` 安全共存
 
-当 Planner 在同一仓库内调用 `claude` 或 `codex` 作为 Executor 时，子进程会自动读取仓库内的 `AGENTS.md` / `CLAUDE.md`。`agent-baton` 通过三层机制彻底避免覆盖与角色串台：
+当 Planner 在同一仓库内调用 `claude` 或 `codex` 作为 Executor 时，子进程会自动读取仓库内的 `AGENTS.md` / `CLAUDE.md`。`batonflow` 通过三层机制彻底避免覆盖与角色串台：
 
-1. **无损初始化**：`agent-baton init` 永不覆盖已有 `CLAUDE.md`，仅在末尾追加/更新 `<!-- agent-baton:start --> ... <!-- agent-baton:end -->` 轻量指引块。
-2. **Executor 身份前缀**：默认自动向子任务附加 `[AGENT_BATON_EXECUTOR_MODE]` 声明，指示 Executor 遵守仓库原有编码规范、直接修改代码，禁止修改 `PLAN.md`。
-3. **硬防递归锁**：子进程自动注入 `AGENT_BATON_ROLE=executor` 与 `AGENT_BATON_DEPTH=1`，任何嵌套调用 `agent-baton` 都会被立即拦截报错。
+1. **无损初始化**：`batonflow init` 永不覆盖已有 `CLAUDE.md`，仅在末尾追加/更新 `<!-- batonflow:start --> ... <!-- batonflow:end -->` 轻量指引块。
+2. **Executor 身份前缀**：默认自动向子任务附加 `[BATONFLOW_EXECUTOR_MODE]` 声明，指示 Executor 遵守仓库原有编码规范、直接修改代码，禁止修改 `PLAN.md`。
+3. **硬防递归锁**：子进程自动注入 `BATONFLOW_ROLE=executor` 与 `BATONFLOW_DEPTH=1`，任何嵌套调用 `batonflow` 都会被立即拦截报错。
 
 ---
 
@@ -204,18 +204,18 @@ agent-baton --dry-run --tier high --task "验证执行链路与模型路由"
 1. **Antigravity 做 Planner → Codex / Claude / Gemini 接力执行**
    - Antigravity 维护 `PLAN.md`，复杂核心模块用 `--tier high`，样板与单测打包用 `--tier low`，每次完成自动跑 `git diff` + 测试并 `git commit`。
 2. **Claude Code 做 Planner → Codex / Gemini 接力执行**
-   - 执行 `agent-baton init --adapter claude-code` 初始化，Claude Code 专注架构把控与代码审查，重体力编码交由 Codex 与 Gemini 接力完成。
+   - 执行 `batonflow init --adapter claude-code` 初始化，Claude Code 专注架构把控与代码审查，重体力编码交由 Codex 与 Gemini 接力完成。
 3. **5 小时限额等待 vs 周限额自动降级接管**
    - 仅触发 5 小时限额（退出码 `2`）：按配置默认暂停并在 `PLAN.md` 记录恢复提示（或设为 `auto_wait` 到点自动继续）。
    - 全部触发周限额（退出码 `3`）：默认下发 `next_action=planner_takeover`，Planner 无缝接手剩余任务直至交付。
 4. **跨客户端断点续传**
-   - 早上用 Antigravity 推进到 `T3` 并提交了 checkpoint，下午换 Claude Code 打开同一仓库，读取 `.agent-baton/WORKFLOW.md` 与 `PLAN.md` 即可从 `T4` 无损续传。
+   - 早上用 Antigravity 推进到 `T3` 并提交了 checkpoint，下午换 Claude Code 打开同一仓库，读取 `.batonflow/WORKFLOW.md` 与 `PLAN.md` 即可从 `T4` 无损续传。
 
 ---
 
 ## 扩展接入新的 AI CLI
 
-接入任意新工具（如 Aider、OpenCode、Qwen Code 或自研 CLI）**无需修改一行源码**，只需在 `agent-baton.config.json` 中增加配置：
+接入任意新工具（如 Aider、OpenCode、Qwen Code 或自研 CLI）**无需修改一行源码**，只需在 `batonflow.config.json` 中增加配置：
 
 ```json
 {
@@ -243,7 +243,7 @@ npm pack --dry-run
 ```
 
 维护者通过 **npm Trusted Publishing（OIDC，无需配置长期 `NPM_TOKEN`）** + 受保护的 `npm-release` GitHub Environment（`.github/workflows/publish.yml`）自动发布新版本：
-1. **首次发版初始化（`v0.1.0`）**：在本地运行一次 `npm login && npm publish --access public`，然后在 `npmjs.com/package/agent-baton/access` → **Trusted Publisher** 中绑定 GitHub Actions（`wenzhang1` / `agent-baton` / `publish.yml` / `npm-release`）。
+1. **首次发版初始化（`v0.1.0`）**：在本地运行一次 `npm login && npm publish --access public`，然后在 `npmjs.com/package/batonflow/access` → **Trusted Publisher** 中绑定 GitHub Actions（`wenzhang1` / `batonflow` / `publish.yml` / `npm-release`）。
 2. **后续全部发版**：通过 PR 更新 `package.json` 版本号并合入 `main` → 推送对应 Tag（如 `git tag v0.1.1 && git push origin v0.1.1`）→ 在 **Actions → Publish to npm** 中点击批准 `npm-release` 人工门禁，自动通过 OIDC 附带 `--provenance` 发布到 npm。
 
 ---

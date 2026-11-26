@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * agent-baton - Client-decoupled local multi-agent relay scheduler.
+ * batonflow - Client-decoupled local multi-agent relay scheduler.
  * Pass the coding baton across any AI CLI—with automatic failover and zero lost context.
  */
 
@@ -31,27 +31,27 @@ function buildMockSetup(scenario) {
 
   const scenarioConfigs = {
     success: {
-      env: { AGENT_BATON_MOCK_BEHAVIOR: 'codex:ok,claude:ok,gemini:ok' },
+      env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok,claude:ok,gemini:ok' },
       policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
     },
     failover: {
-      env: { AGENT_BATON_MOCK_BEHAVIOR: 'codex:short_limit,claude:ok,gemini:ok' },
+      env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:short_limit,claude:ok,gemini:ok' },
       policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
     },
     'short-limit': {
-      env: { AGENT_BATON_MOCK_BEHAVIOR: 'codex:short_limit,claude:short_limit,gemini:short_limit' },
+      env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:short_limit,claude:short_limit,gemini:short_limit' },
       policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
     },
     'weekly-limit': {
-      env: { AGENT_BATON_MOCK_BEHAVIOR: 'codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit' },
+      env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit' },
       policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
     },
     error: {
-      env: { AGENT_BATON_MOCK_BEHAVIOR: 'codex:error,claude:ok,gemini:ok' },
+      env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:error,claude:ok,gemini:ok' },
       policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
     },
     'auto-wait': {
-      env: { AGENT_BATON_MOCK_BEHAVIOR: 'codex:short_limit_once,claude:short_limit,gemini:short_limit' },
+      env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:short_limit_once,claude:short_limit,gemini:short_limit' },
       policy: {
         short_limit: 'auto_wait',
         weekly_limit: 'planner_takeover',
@@ -95,8 +95,8 @@ function buildMockSetup(scenario) {
         ...(preset.policy.auto_wait || {}),
       },
     },
-    state_file: '.agent-baton/mock-state.json',
-    log_dir: '.agent-baton/logs',
+    state_file: '.batonflow/mock-state.json',
+    log_dir: '.batonflow/logs',
     timeout_seconds: 30,
   };
 
@@ -107,7 +107,7 @@ function printStatus(config, stateFilePath) {
   const state = loadState(stateFilePath);
   const now = Date.now();
 
-  console.log('=== agent-baton Status ===');
+  console.log('=== batonflow Status ===');
   console.log(`Executor chain:       ${config.executor_chain.join(' -> ')}`);
   console.log(`Short limit policy:   ${config.exhaustion_policy.short_limit}`);
   console.log(`Weekly limit policy:  ${config.exhaustion_policy.weekly_limit}`);
@@ -140,11 +140,11 @@ async function main() {
   try {
     opts = parseArgs(process.argv.slice(2));
   } catch (err) {
-    process.stderr.write(`[agent-baton] ERROR: ${err.message}\n`);
+    process.stderr.write(`[batonflow] ERROR: ${err.message}\n`);
     process.exit(EXIT_ERROR);
   }
 
-  // Handle `agent-baton init` subcommand
+  // Handle `batonflow init` subcommand
   if (opts.command === 'init') {
     if (opts.help) {
       process.stdout.write(INIT_HELP_TEXT);
@@ -160,7 +160,7 @@ async function main() {
       });
       process.exit(EXIT_OK);
     } catch (err) {
-      process.stderr.write(`[agent-baton] ERROR: ${err.message}\n`);
+      process.stderr.write(`[batonflow] ERROR: ${err.message}\n`);
       process.exit(EXIT_ERROR);
     }
   }
@@ -171,23 +171,23 @@ async function main() {
   }
 
   if (opts.version) {
-    console.log(`agent-baton ${VERSION}`);
+    console.log(`batonflow ${VERSION}`);
     process.exit(EXIT_OK);
   }
 
-  // Hard recursion guard: prevent an Executor CLI from recursively invoking agent-baton
+  // Hard recursion guard: prevent an Executor CLI from recursively invoking batonflow
   // if the target repo's CLAUDE.md / AGENTS.md also contains Planner rules.
-  const depth = Number.parseInt(process.env.AGENT_BATON_DEPTH || '0', 10) || 0;
-  const allowNested = process.env.AGENT_BATON_ALLOW_NESTED === '1';
+  const depth = Number.parseInt(process.env.BATONFLOW_DEPTH || '0', 10) || 0;
+  const allowNested = process.env.BATONFLOW_ALLOW_NESTED === '1';
   if (
     !allowNested &&
     !opts.status &&
     !opts.resetState &&
-    (depth >= 1 || process.env.AGENT_BATON_ROLE === 'executor')
+    (depth >= 1 || process.env.BATONFLOW_ROLE === 'executor')
   ) {
     process.stderr.write(
-      '[agent-baton] ERROR: Nested agent-baton invocation blocked (AGENT_BATON_ROLE=executor). ' +
-        'You are running as a task Executor—edit repository files directly instead of calling agent-baton.\n'
+      '[batonflow] ERROR: Nested batonflow invocation blocked (BATONFLOW_ROLE=executor). ' +
+        'You are running as a task Executor—edit repository files directly instead of calling batonflow.\n'
     );
     process.exit(EXIT_ERROR);
   }
@@ -202,7 +202,7 @@ async function main() {
       console.log(removed ? `Cleared state: ${statePath}` : `No state file to clear (${statePath})`);
       process.exit(EXIT_OK);
     } catch (err) {
-      process.stderr.write(`[agent-baton] ERROR: ${err.message}\n`);
+      process.stderr.write(`[batonflow] ERROR: ${err.message}\n`);
       process.exit(EXIT_ERROR);
     }
   }
@@ -213,7 +213,7 @@ async function main() {
       printStatus(config, path.resolve(cwd, config.state_file));
       process.exit(EXIT_OK);
     } catch (err) {
-      process.stderr.write(`[agent-baton] ERROR: ${err.message}\n`);
+      process.stderr.write(`[batonflow] ERROR: ${err.message}\n`);
       process.exit(EXIT_ERROR);
     }
   }
@@ -222,16 +222,16 @@ async function main() {
   try {
     taskText = resolveTaskText(opts);
   } catch (err) {
-    process.stderr.write(`[agent-baton] ERROR: ${err.message}\n`);
+    process.stderr.write(`[batonflow] ERROR: ${err.message}\n`);
     process.exit(EXIT_ERROR);
   }
 
   if (!opts.tier) {
-    process.stderr.write('[agent-baton] ERROR: --tier <high|low> is required.\n');
+    process.stderr.write('[batonflow] ERROR: --tier <high|low> is required.\n');
     process.exit(EXIT_ERROR);
   }
   if (!taskText) {
-    process.stderr.write('[agent-baton] ERROR: --task "<description>" or --task-file <path> is required.\n');
+    process.stderr.write('[batonflow] ERROR: --task "<description>" or --task-file <path> is required.\n');
     process.exit(EXIT_ERROR);
   }
 
@@ -244,11 +244,11 @@ async function main() {
       config = mockSetup.config;
       extraEnv = {
         ...mockSetup.extraEnv,
-        AGENT_BATON_MOCK_STATE_FILE: path.resolve(cwd, '.agent-baton/mock-counter.json'),
+        BATONFLOW_MOCK_STATE_FILE: path.resolve(cwd, '.batonflow/mock-counter.json'),
       };
       resetState(path.resolve(cwd, config.state_file));
-      resetState(extraEnv.AGENT_BATON_MOCK_STATE_FILE);
-      process.stderr.write(`[agent-baton] MOCK MODE: scenario="${opts.mockScenario}"\n`);
+      resetState(extraEnv.BATONFLOW_MOCK_STATE_FILE);
+      process.stderr.write(`[batonflow] MOCK MODE: scenario="${opts.mockScenario}"\n`);
     } else {
       const loaded = loadConfig({
         configPath: opts.configPath,
@@ -266,7 +266,7 @@ async function main() {
         taskText,
         noPrefix: opts.noPrefix,
       });
-      console.log('=== agent-baton Dry Run ===');
+      console.log('=== batonflow Dry Run ===');
       console.log(`Tier:                ${opts.tier}`);
       console.log(`Short limit policy:  ${config.exhaustion_policy.short_limit}`);
       console.log(`Weekly limit policy: ${config.exhaustion_policy.weekly_limit}`);
@@ -291,7 +291,7 @@ async function main() {
     });
     process.exit(exitCode);
   } catch (err) {
-    process.stderr.write(`[agent-baton] ERROR: ${err.message}\n`);
+    process.stderr.write(`[batonflow] ERROR: ${err.message}\n`);
     process.exit(EXIT_ERROR);
   }
 }

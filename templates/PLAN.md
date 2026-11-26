@@ -1,4 +1,4 @@
-# agent-baton Task Plan (`PLAN.md`)
+# batonflow Task Plan (`PLAN.md`)
 
 > **Single source of truth** for Planner & cross-client checkpoint recovery.
 > **Rule:** Only the **Planner** updates this file. Executors must never edit `PLAN.md`.
