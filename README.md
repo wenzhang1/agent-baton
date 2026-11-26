@@ -120,25 +120,55 @@ See [`batonflow.config.example.json`](batonflow.config.example.json) for the ful
   "executor_chain": ["codex", "claude", "gemini"],
   "tiers": {
     "high": {
-      "codex": "gpt-5.3-codex",
-      "claude": "claude-opus-4-6",
-      "gemini": "gemini-2.5-pro"
+      "codex": "gpt-6.2-astra",
+      "claude": "claude-opus-5-5",
+      "gemini": "gemini-4-neon"
     },
     "low": {
-      "codex": "gpt-5.1-codex-mini",
-      "claude": "claude-sonnet-4-6",
-      "gemini": "gemini-2.5-flash"
+      "codex": "gpt-6.2-sol",
+      "claude": "claude-sonnet-5-5",
+      "gemini": "gemini-4-hydrogen"
+    }
+  },
+  "default_effort": {
+    "high": "high",
+    "low": "medium"
+  },
+  "effort_map": {
+    "gemini": {
+      "max": "xhigh"
     }
   },
   "commands": {
-    "codex": ["codex", "exec", "-m", "{{model}}", "{{task}}"],
-    "claude": ["claude", "-p", "--model", "{{model}}", "{{task}}"],
-    "gemini": ["gemini", "-p", "-m", "{{model}}", "{{task}}"]
+    "codex": ["codex", "exec", "--sandbox", "workspace-write", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
+    "claude": ["claude", "-p", "--permission-mode", "acceptEdits", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
+    "gemini": ["agy", "--mode=auto", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
   }
 }
 ```
 
-> **Safe Command Templates:** `commands` supports both **argv arrays** (recommended—executed with `shell: false`, 100% immune to quote/backtick/newline/`$VAR` corruption) and **string templates** (e.g., `"codex exec -m {{model}} \"{{task}}\""`, safely tokenized or POSIX-quoted automatically).
+> **Non-Interactive Executor Permissions (`safe` vs `yolo`):**
+> Because `batonflow` invokes Executor CLIs headlessly (`stdin` closed), Executors cannot pause for interactive `[y/N]` prompts. `batonflow` provides two built-in permission presets you can switch anytime with a single command:
+>
+> | Executor | `safe` Mode (Default — Local Dev) | Scope | `yolo` Mode (Isolated Containers / VMs ONLY) |
+> | :--- | :--- | :--- | :--- |
+> | **Codex CLI** | `--sandbox workspace-write` | Read/write **current workspace only**; protects system files & `.git` | `--yolo` |
+> | **Claude Code** | `--permission-mode acceptEdits` | Auto-allows workspace reads/edits; add `--allowedTools "Read,Edit,Bash(npm test:*)"` if needed | `--dangerously-skip-permissions` |
+> | **Gemini 4 (`agy`)** | `--mode=auto` | Auto-runs routine workspace edits while guarding destructive actions | `--dangerously-skip-permissions` |
+>
+> Switch modes anytime (preserves your custom models, policies, and third-party executors):
+> ```bash
+> # Initialize directly in isolated container/VM full-bypass mode:
+> batonflow init --permission-mode yolo
+>
+> # Or switch an existing project anytime:
+> batonflow mode yolo    # WARNING: use ONLY in isolated Docker containers, ephemeral VMs, or CI
+> batonflow mode safe    # Switch back to scoped workspace-write defaults
+> ```
+>
+> **Reasoning / Thinking Effort (`--effort`):** Supports `low`, `medium`, `high`, `xhigh`, and `max`. When omitted, `batonflow` uses `default_effort[tier]` (`high` → `high`, `low` → `medium`). Use `effort_map` to safely downgrade unsupported levels during failover (e.g., mapping `max` → `xhigh` for `agy` / Gemini 4).
+>
+> **Safe Command Templates:** `commands` supports both **argv arrays** (recommended—executed with `shell: false`, 100% immune to quote/backtick/newline/`$VAR` corruption) and **string templates** (e.g., `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`, safely tokenized or POSIX-quoted automatically).
 
 ### 3-Mode Exhaustion Policy (`short_limit` vs `weekly_limit`)
 
@@ -169,9 +199,11 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 
 | Command / Flag | Description |
 | :--- | :--- |
-| `init [dir] [--adapter ...] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
+| `init [dir] [--adapter ...] [--permission-mode safe\|yolo] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
 | `init --global-skill [target] [--force]` | Install the universal Skill globally (`all` / `antigravity` / `claude-code` / `codex`) without creating project files |
+| `mode <safe\|yolo> [--config <path>]` | Switch `codex`/`claude`/`gemini` commands in `batonflow.config.json` between `safe` (workspace-write) and `yolo` (container full-bypass) |
 | `--tier <high\|low>` | Capability tier to route (required for task dispatch) |
+| `--effort <level>` | Reasoning/thinking effort: `low \| medium \| high \| xhigh \| max` (optional; defaults to `default_effort[tier]`) |
 | `--task "<text>"` | Inline task prompt |
 | `--task-file <path\|->` | Read multi-line prompt from file or stdin (`-`) |
 | `--executor <name>` | Force a single executor (no chain failover) |

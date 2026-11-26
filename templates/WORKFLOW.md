@@ -28,19 +28,20 @@ Before dispatching from `PLAN.md`, group pending `[ ]` tasks dynamically by risk
 
 ---
 
-## 3. Capability Tier Decision Rules (`--tier high` vs `--tier low`)
+## 3. Capability Tier & Reasoning Effort Decision Rules
 
-Choose the lowest tier that can reliably succeed on the first try:
+Choose the lowest tier and reasoning effort (`--effort low|medium|high|xhigh|max`) that can reliably succeed on the first try:
 
-- Use `--tier high` when the task involves:
+- Use `--tier high` (default effort: `high`) when the task involves:
   - Non-trivial architecture, cross-module design, or subtle bug root-cause fixes
   - Security, cryptography, authentication, or data-migration logic
   - Ambiguous requirements or multi-file refactors with tight invariants
   - A retry escalation after `--tier low` failed twice on the same task
-- Use `--tier low` when the task involves:
+  - Pass `--effort xhigh` or `--effort max` for exceptionally complex reasoning or long-horizon root-cause debugging (`batonflow` automatically maps `max` → `xhigh` for Executors whose ceiling is `xhigh`, such as `agy`/Gemini 4).
+- Use `--tier low` (default effort: `medium`) when the task involves:
   - Well-scoped feature additions following established patterns in the repo
   - Unit/integration tests, boilerplate CRUD, styling, documentation, or config edits
-  - Targeted small fixes with crystal-clear file paths and acceptance criteria
+  - Pass `--effort low` for quick mechanical changes (renames, formatting, simple boilerplate).
 
 ---
 

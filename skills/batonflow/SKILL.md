@@ -27,8 +27,9 @@ Use this workflow whenever acting as the **Planner & Verifier** for a repository
 2. **Dispatch to Executor**:
    - Run:
      ```bash
-     batonflow --tier <high|low> --task "<self-contained task + acceptance criteria>"
+     batonflow --tier <high|low> [--effort low|medium|high|xhigh|max] --task "<self-contained task + acceptance criteria>"
      ```
+   - Omit `--effort` to use `default_effort[tier]` from `batonflow.config.json` (`high` → `high`, `low` → `medium`); pass `--effort xhigh` or `--effort max` for deep debugging/architecture, or `--effort low` for trivial edits.
    - For long or multi-line prompts, write `.batonflow/current-task.md` and pass `--task-file .batonflow/current-task.md`.
 3. **Verify & Commit Checkpoint (Exit `0`)**:
    - Audit `git status` and `git diff` (ensure scope is clean and `PLAN.md` was untouched by the Executor).

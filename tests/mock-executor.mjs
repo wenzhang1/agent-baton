@@ -15,10 +15,11 @@ const __dirname = path.dirname(__filename);
 const BIN_PATH = path.resolve(__dirname, '..', 'bin', 'batonflow');
 
 function parseSimpleArgs(argv) {
-  const out = { executor: 'unknown', model: 'unknown', task: '' };
+  const out = { executor: 'unknown', model: 'unknown', effort: '', task: '' };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--executor') out.executor = argv[++i] || '';
     else if (argv[i] === '--model') out.model = argv[++i] || '';
+    else if (argv[i] === '--effort') out.effort = argv[++i] || '';
     else if (argv[i] === '--task') out.task = argv[++i] || '';
   }
   return out;
@@ -64,6 +65,7 @@ switch (mode) {
         status: 'ok',
         executor: args.executor,
         model: args.model,
+        effort: args.effort || process.env.BATONFLOW_EFFORT || null,
         callCount,
         role: process.env.BATONFLOW_ROLE || null,
         depth: process.env.BATONFLOW_DEPTH || null,

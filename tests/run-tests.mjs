@@ -37,9 +37,9 @@ function createTestWorkspace(name, configOverrides = {}) {
       },
     },
     commands: {
-      codex: [process.execPath, MOCK_EXECUTOR, '--executor', 'codex', '--model', '{{model}}', '--task', '{{task}}'],
-      claude: [process.execPath, MOCK_EXECUTOR, '--executor', 'claude', '--model', '{{model}}', '--task', '{{task}}'],
-      gemini: [process.execPath, MOCK_EXECUTOR, '--executor', 'gemini', '--model', '{{model}}', '--task', '{{task}}'],
+      codex: [process.execPath, MOCK_EXECUTOR, '--executor', 'codex', '--model', '{{model}}', '--effort', '{{effort}}', '--task', '{{task}}'],
+      claude: [process.execPath, MOCK_EXECUTOR, '--executor', 'claude', '--model', '{{model}}', '--effort', '{{effort}}', '--task', '{{task}}'],
+      gemini: [process.execPath, MOCK_EXECUTOR, '--executor', 'gemini', '--model', '{{model}}', '--effort', '{{effort}}', '--task', '{{task}}'],
     },
     exhaustion_policy: {
       short_limit: 'manual_pause',
@@ -473,6 +473,80 @@ test('20. `batonflow init --global-skill [target]` installs universal SKILL.md w
   });
   assert.equal(r3.status, 0, r3.stderr);
   assert.match(fs.readFileSync(claudeSkill, 'utf8'), /^---\nname: batonflow\n/);
+});
+
+test('21. Reasoning effort defaults per tier, --effort overrides, and effort_map downgrades on failover', () => {
+  const { dir } = createTestWorkspace('effort-routing');
+
+  // Default effort: high -> high, low -> medium
+  const highDefault = runBatonflow(['--tier', 'high', '--task', 'Core design'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok' },
+  });
+  assert.equal(highDefault.status, 0, highDefault.stderr);
+  assert.equal(parseMockJson(highDefault.stdout).effort, 'high');
+
+  const lowDefault = runBatonflow(['--tier', 'low', '--task', 'Simple tests'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok' },
+  });
+  assert.equal(lowDefault.status, 0, lowDefault.stderr);
+  assert.equal(parseMockJson(lowDefault.stdout).effort, 'medium');
+
+  // Explicit --effort xhigh override
+  const xhigh = runBatonflow(['--tier', 'high', '--effort', 'xhigh', '--task', 'Deep debug'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:ok' },
+  });
+  assert.equal(xhigh.status, 0, xhigh.stderr);
+  assert.equal(parseMockJson(xhigh.stdout).effort, 'xhigh');
+
+  // Failover with --effort max -> codex & claude hit limit -> gemini receives mapped `xhigh`
+  const mappedFailover = runBatonflow(['--tier', 'high', '--effort', 'max', '--task', 'Hardest bug'], {
+    cwd: dir,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:short_limit,claude:short_limit,gemini:ok' },
+  });
+  assert.equal(mappedFailover.status, 0, mappedFailover.stderr);
+  const payload = parseMockJson(mappedFailover.stdout);
+  assert.equal(payload.executor, 'gemini');
+  assert.equal(payload.effort, 'xhigh');
+});
+
+test('22. `batonflow init --permission-mode yolo` and `batonflow mode safe|yolo` switch presets safely', () => {
+  const dir = path.join(tmpBase, 'permission-modes');
+  fs.mkdirSync(dir, { recursive: true });
+
+  // 1. Initialize directly in yolo mode
+  const initYolo = runBatonflow(['init', '--permission-mode', 'yolo'], { cwd: dir });
+  assert.equal(initYolo.status, 0, initYolo.stderr);
+  const cfgPath = path.join(dir, 'batonflow.config.json');
+  let cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(cfg.commands.codex.includes('--yolo'));
+  assert.ok(cfg.commands.claude.includes('--dangerously-skip-permissions'));
+  assert.ok(cfg.commands.gemini.includes('--dangerously-skip-permissions'));
+
+  // Add a custom executor & custom timeout to ensure `batonflow mode` preserves them
+  cfg.commands.opencode = ['opencode', 'run', '{{task}}'];
+  cfg.timeout_seconds = 1234;
+  fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), 'utf8');
+
+  // 2. Switch back to safe mode
+  const toSafe = runBatonflow(['mode', 'safe'], { cwd: dir });
+  assert.equal(toSafe.status, 0, toSafe.stderr);
+  cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(cfg.commands.codex.includes('workspace-write'));
+  assert.ok(cfg.commands.claude.includes('acceptEdits'));
+  assert.ok(cfg.commands.gemini.includes('--mode=auto'));
+  assert.deepEqual(cfg.commands.opencode, ['opencode', 'run', '{{task}}']);
+  assert.equal(cfg.timeout_seconds, 1234);
+
+  // 3. Switch to yolo mode again
+  const toYolo = runBatonflow(['mode', 'yolo'], { cwd: dir });
+  assert.equal(toYolo.status, 0, toYolo.stderr);
+  cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  assert.ok(cfg.commands.codex.includes('--yolo'));
+  assert.ok(cfg.commands.claude.includes('--dangerously-skip-permissions'));
+  assert.ok(cfg.commands.gemini.includes('--dangerously-skip-permissions'));
 });
 
 // Run all tests

@@ -122,25 +122,55 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
   "executor_chain": ["codex", "claude", "gemini"],
   "tiers": {
     "high": {
-      "codex": "gpt-5.3-codex",
-      "claude": "claude-opus-4-6",
-      "gemini": "gemini-2.5-pro"
+      "codex": "gpt-6.2-astra",
+      "claude": "claude-opus-5-5",
+      "gemini": "gemini-4-neon"
     },
     "low": {
-      "codex": "gpt-5.1-codex-mini",
-      "claude": "claude-sonnet-4-6",
-      "gemini": "gemini-2.5-flash"
+      "codex": "gpt-6.2-sol",
+      "claude": "claude-sonnet-5-5",
+      "gemini": "gemini-4-hydrogen"
+    }
+  },
+  "default_effort": {
+    "high": "high",
+    "low": "medium"
+  },
+  "effort_map": {
+    "gemini": {
+      "max": "xhigh"
     }
   },
   "commands": {
-    "codex": ["codex", "exec", "-m", "{{model}}", "{{task}}"],
-    "claude": ["claude", "-p", "--model", "{{model}}", "{{task}}"],
-    "gemini": ["gemini", "-p", "-m", "{{model}}", "{{task}}"]
+    "codex": ["codex", "exec", "--sandbox", "workspace-write", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
+    "claude": ["claude", "-p", "--permission-mode", "acceptEdits", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
+    "gemini": ["agy", "--mode=auto", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
   }
 }
 ```
 
-> **命令模板双格式安全兼容**：推荐使用**参数数组格式**（`shell: false` 直接传递参数，任务中包含多行代码块、引号、反引号、`$VAR` 也不会产生转义错误）；同时也兼容单行**字符串模板**（如 `"codex exec -m {{model}} \"{{task}}\""`），内部会自动安全分词或 POSIX 转义。
+> **非交互模式权限预设（`safe` vs `yolo`）**：
+> 由于 `batonflow` 以无头非交互方式调用 Executor（关闭 `stdin`），子进程无法停下来等你按 `y/n`。`batonflow` 内置了两套权限预设，支持一行命令随时切换：
+>
+> | Executor | `safe` 模式（默认 — 本地开发推荐） | 权限范围 | `yolo` 模式（仅限隔离容器/虚拟机） |
+> | :--- | :--- | :--- | :--- |
+> | **Codex CLI** | `--sandbox workspace-write` | 仅允许读写**当前工作区**，保护系统文件与 `.git` | `--yolo` |
+> | **Claude Code** | `--permission-mode acceptEdits` | 自动允许工作区读写/改文件；如需顺便跑测试可追加 `--allowedTools "Read,Edit,Bash(npm test:*)"` | `--dangerously-skip-permissions` |
+> | **Gemini 4 (`agy`)** | `--mode=auto` | 自动执行常规工作区编辑，同时拦截高危破坏操作 | `--dangerously-skip-permissions` |
+>
+> 一行命令自由切换（自动保留你自定义的模型、限额策略与其他第三方 Executor）：
+> ```bash
+> # 初始化时直接启用隔离容器全放开模式：
+> batonflow init --permission-mode yolo
+>
+> # 对已有项目随时切换：
+> batonflow mode yolo    # 警告：仅建议在 Docker 容器、临时虚拟机或隔离 CI 环境使用！
+> batonflow mode safe    # 一键切回安全的工作区受限写入模式
+> ```
+>
+> **思维/推理强度控制（`--effort`）**：原生支持 `low` / `medium` / `high` / `xhigh` / `max` 5 档。不传 `--effort` 时自动采用 `default_effort[tier]`（默认 `high` 档用 `high`，`low` 档用 `medium`）；`effort_map` 可在接力时自动把目标 CLI 不支持的档位做平滑降级（例如把 `max` 自动映射为 `agy`/Gemini 4 支持的 `xhigh`，防止接力报错）。
+>
+> **命令模板双格式安全兼容**：推荐使用**参数数组格式**（`shell: false` 直接传递参数，任务中包含多行代码块、引号、反引号、`$VAR` 也不会产生转义错误）；同时也兼容单行**字符串模板**（如 `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`），内部会自动安全分词或 POSIX 转义。
 
 ### 5 小时限额 vs 周限额：三模式耗尽策略配置
 
@@ -171,9 +201,11 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 
 | 命令 / 参数 | 说明 |
 | :--- | :--- |
-| `init [目录] [--adapter ...] [--force]` | 初始化配置、工作流、任务板、通用 Skill（`.agents/skills/` 与 `.claude/skills/`）与适配器到指定目录（默认当前目录） |
+| `init [目录] [--adapter ...] [--permission-mode safe\|yolo] [--force]` | 初始化配置、工作流、任务板、通用 Skill（`.agents/skills/` 与 `.claude/skills/`）与适配器到指定目录（默认当前目录） |
 | `init --global-skill [目标] [--force]` | 一次性将通用 Skill 安装到全局（`all` / `antigravity` / `claude-code` / `codex`），不生成项目文件 |
+| `mode <safe\|yolo> [--config <路径>]` | 一键切换 `batonflow.config.json` 中内置 Executor 的权限模式（`safe` 安全工作区写入 / `yolo` 隔离容器全放开） |
 | `--tier <high\|low>` | 指定能力档位（派发任务时必填） |
+| `--effort <强度>` | 指定推理/思维强度：`low \| medium \| high \| xhigh \| max`（可选，默认读取 `default_effort[tier]`） |
 | `--task "<任务描述>"` | 内联任务文本 |
 | `--task-file <路径\|->` | 从文件或标准输入（`-`）读取长任务 Prompt |
 | `--executor <名称>` | 强制指定单个 Executor（不走链路接力） |

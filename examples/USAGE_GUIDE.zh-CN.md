@@ -44,11 +44,32 @@ batonflow --version
    仅写入全局 `SKILL.md`，**不会在当前目录生成任何项目文件**。之后在具体需要接力的项目里，仍需运行一次 `batonflow init` 生成 `batonflow.config.json` 和 `PLAN.md`。
 
 ### 核对 `batonflow.config.json` 并演练验证
-在 `executor_chain` 中只保留你本机实际已安装并登录的 AI CLI：
+在 `executor_chain` 中只保留你本机实际已安装并登录的 AI CLI。默认配置已预置最新一代模型与思维强度映射：
 
 ```json
 {
   "executor_chain": ["codex", "claude", "gemini"],
+  "tiers": {
+    "high": {
+      "codex": "gpt-6.2-astra",
+      "claude": "claude-opus-5-5",
+      "gemini": "gemini-4-neon"
+    },
+    "low": {
+      "codex": "gpt-6.2-sol",
+      "claude": "claude-sonnet-5-5",
+      "gemini": "gemini-4-hydrogen"
+    }
+  },
+  "default_effort": {
+    "high": "high",
+    "low": "medium"
+  },
+  "effort_map": {
+    "gemini": {
+      "max": "xhigh"
+    }
+  },
   "exhaustion_policy": {
     "short_limit": "manual_pause",
     "weekly_limit": "planner_takeover"
@@ -56,34 +77,45 @@ batonflow --version
 }
 ```
 
-运行零额度消耗演练，确认配置和模型路由正确：
+运行零额度消耗演练，确认模型与思维强度路由正确（可以看到 `--effort max` 传给 `agy`/Gemini 4 时会自动安全映射为 `xhigh`）：
 ```bash
-batonflow --dry-run --tier high --task "验证配置与链路"
+batonflow --dry-run --tier high --effort max --task "验证配置与链路"
 ```
 
 ---
 
-## 2. 在 Antigravity 对话中直接使用（全自动接力）
+## 2. 在 AI 客户端对话中直接使用（全自动接力）
 
-初始化完成后，**无需自己手动敲 `batonflow --tier ...`**，直接在 Antigravity 对话框发需求即可。
+初始化完成后，**无需自己手动敲 `batonflow --tier ...`**，直接在 **Antigravity、Claude Code（支持 `/batonflow`）、Codex 或 Cursor** 对话框发需求即可。
 
 ### 平时聊天会被打扰吗？
-**不会。** 只有当你提到 `batonflow`、`PLAN.md` 或明确要求多 CLI 接力执行时，Antigravity 才会加载 `batonflow` Skill；日常提问（如“解释这段代码”、“修一个 typo”）完全按正常模式响应。
+**不会。** 只有当你提到 `batonflow`、`PLAN.md` 或明确要求多 CLI 接力执行时，才会加载 `batonflow` Skill；日常提问（如“解释这段代码”、“修一个 typo”）完全按正常模式响应。
 
-### 对话示例 1：先拆解计划，再分批接力执行
-直接对 Antigravity 说：
+### 日常极简用法（一句话就够）
+因为 `skills/batonflow/SKILL.md` 已内置前置步骤（自动读取 `.batonflow/WORKFLOW.md` 并拆解写入 `PLAN.md`），平时使用时不需要专门把这两个文件名敲出来：
+
+- **新需求**：`用 batonflow 实现用户登录与 JWT 刷新并补全单元测试`
+- **Claude Code 里更短**：`/batonflow 实现用户登录与 JWT 刷新并补全单元测试`
+- **额度恢复 / 换客户端续传**：`用 batonflow 继续`
+
+> **触发说明**：唯一会不触发的情况，是你**完全没提 `batonflow` 也没提 `PLAN.md`**（例如只说“帮我做个登录功能”）——这时客户端会按普通模式自己直接写代码，不会进入接力流程。只要话里带了 **`batonflow`**，整套规范就会自动生效。
+
+### 完整示例 Prompt（显式指定步骤）
+直接对你的 Planner 客户端说：
 
 > 「请使用 **batonflow**，按 `.batonflow/WORKFLOW.md` 的规范把“实现用户登录与 JWT 刷新轮换并补全单元测试”拆解写入 `PLAN.md`。先给我确认，确认后用 `batonflow` 分批派发并验收。」
 
-Antigravity 会自动执行以下闭环：
+Planner 会自动执行以下闭环：
 1. 激活 `batonflow` Skill 并读取 `.batonflow/WORKFLOW.md`。
 2. 在 `PLAN.md` 中拆出任务清单、复杂度档位（`high` / `low`）、分批组、依赖关系与验收标准。
 3. 你确认后，自动派发：
-   - 高风险核心认证逻辑（`T1`、`T2`）：单步派发 `--tier high`。
-   - 低风险强关联路由与单测（`T3 + T4`）：打包派发 `--tier low`。
+   - 高风险核心认证逻辑（`T1`、`T2`）：单步派发 `--tier high`（默认强度 `high`，疑难排查可加 `--effort xhigh` 或 `max`）。
+   - 低风险强关联路由与单测（`T3 + T4`）：打包派发 `--tier low`（默认强度 `medium`，简单机械修改可加 `--effort low`）。
 4. 每次 `batonflow` 返回 `0` 后，自动检查 `git diff`、运行测试/构建、将 `PLAN.md` 对应项标记为 `[x]` 并执行 `git commit` 存档。
 
-> **小贴士**：第一次在终端调用 `batonflow --tier ...` 时，弹窗点击 **Always Allow**，后续即可全程无人值守闭环执行。
+> **小贴士（关于权限确认）**：
+> 1. 第一次在终端调用 `batonflow --tier ...` 时，弹窗点击 **Always Allow**，后续 Planner 即可全程无人值守派发。
+> 2. 子进程 Executor 默认以非交互模式 + **工作区受限自动写入**运行（`codex --sandbox workspace-write`、`claude --permission-mode acceptEdits`、`agy --mode=auto`），改项目文件不会卡在 `y/n` 确认，同时仍拦截高危系统操作。
 
 ---
 
@@ -92,16 +124,16 @@ Antigravity 会自动执行以下闭环：
 运行内置模拟命令，直观查看首选 Executor（`codex`）触发 5 小时 429 限流后如何自动交棒给 `claude`：
 
 ```bash
-batonflow --mock failover --tier high --task "实现 JWT 刷新中间件"
+batonflow --mock failover --tier high --effort xhigh --task "实现 JWT 刷新中间件"
 ```
 
 输出示例：
 ```text
-[batonflow] DISPATCH executor=codex tier=high model=mock-codex-high
+[batonflow] DISPATCH executor=codex tier=high model=mock-codex-high effort=xhigh
 [codex] HTTP 429 Too Many Requests: You have reached your 5-hour rate limit. Please try again in 45 minutes.
 [batonflow] HANDOFF codex (short_limit: try again in 45 minutes) -> claude
-[batonflow] DISPATCH executor=claude tier=high model=mock-claude-high
-[batonflow] SUCCESS executor=claude model=mock-claude-high duration=0.1s log=.batonflow/logs/...
+[batonflow] DISPATCH executor=claude tier=high model=mock-claude-high effort=xhigh
+[batonflow] SUCCESS executor=claude model=mock-claude-high effort=xhigh duration=0.1s log=.batonflow/logs/...
 ```
 
 同时 `codex` 会进入 `.batonflow/state.json` 冷却记录，下一个子任务会直接跳过 `codex` 交给 `claude`，避免重复撞限流。
@@ -153,8 +185,14 @@ batonflow --status
 # 额度提前恢复时，手动清空冷却状态
 batonflow --reset-state
 
-# 强制指定某个 Executor（不走链路接力）
-batonflow --tier high --executor claude --task "审查认证边界条件"
+# 强制指定某个 Executor 与思维强度（不走链路接力）
+batonflow --tier high --effort xhigh --executor claude --task "审查认证边界条件"
+
+# 极限推理强度（codex/claude 用 max，接力到 gemini/agy 时自动映射为 xhigh）
+batonflow --tier high --effort max --task "定位任务队列中的并发竞态问题"
+
+# 快速低强度模式（适合简单机械修改）
+batonflow --tier low --effort low --task "批量重命名测试中的环境变量常量"
 
 # 通过文件传递超长多行任务 Prompt
 batonflow --tier high --task-file .batonflow/current-task.md
