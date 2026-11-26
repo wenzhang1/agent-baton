@@ -1,4 +1,4 @@
-# agent-baton
+# batonflow
 
 **Pass the coding baton across any AI CLI—with automatic failover and zero lost context.**
 
@@ -6,15 +6,15 @@ English | [简体中文](README.zh-CN.md)
 
 ---
 
-`agent-baton` is a lightweight, **zero-dependency**, client-decoupled local multi-agent (**Planner + Executor**) relay scheduler. Pair any AI coding CLI—such as **Antigravity / Gemini**, **Claude Code**, **Codex CLI**, or custom local wrappers—into a resilient coding pipeline featuring:
+`batonflow` is a lightweight, **zero-dependency**, client-decoupled local multi-agent (**Planner + Executor**) relay scheduler. Pair any AI coding CLI—such as **Antigravity / Gemini**, **Claude Code**, **Codex CLI**, or custom local wrappers—into a resilient coding pipeline featuring:
 
 - **Dynamic task batching**: Single-step dispatch for high-risk core logic; 2–3 task bundling for low-risk boilerplate.
 - **Capability tier routing (`high` / `low`)**: Dynamically maps abstract tiers to the right model per CLI.
 - **Layered rate-limit detection & automatic failover**: Distinguishes **5-hour rolling / short-term limits** (`short_limit`) from **weekly / billing hard quotas** (`weekly_limit`), handing off automatically along `executor_chain`.
 - **3-mode exhaustion policy**: Independently configure **`planner_takeover`**, **`manual_pause`**, or **`auto_wait`** (with smart reset-time parsing & automatic retry) for both short-term and weekly limits.
-- **One-command project setup (`agent-baton init`)**: Enter any project and run `agent-baton init` to scaffold config, workflow, task board, and client adapters safely.
+- **One-command project setup (`batonflow init`)**: Enter any project and run `batonflow init` to scaffold config, workflow, task board, and client adapters safely.
 - **Cross-client checkpoint resume**: Git commits + `PLAN.md` preserve exact state so any Planner client can resume seamlessly with zero lost context.
-- **Safe coexistence with `AGENTS.md` / `CLAUDE.md`**: Three-layer anti-collision protection (idempotent marker append, `[AGENT_BATON_EXECUTOR_MODE]` preamble, and hard `AGENT_BATON_DEPTH` recursion lock).
+- **Safe coexistence with `AGENTS.md` / `CLAUDE.md`**: Three-layer anti-collision protection (idempotent marker append, `[BATONFLOW_EXECUTOR_MODE]` preamble, and hard `BATONFLOW_DEPTH` recursion lock).
 
 ---
 
@@ -23,7 +23,7 @@ English | [简体中文](README.zh-CN.md)
 ```mermaid
 flowchart TD
     P["Planner (Antigravity / Claude Code / Any Client)"] -->|"Read PLAN.md & WORKFLOW.md"| B["Dynamic Batching & Tier Selection (high / low)"]
-    B -->|"agent-baton --tier high --task ..."| C["agent-baton Scheduler (Zero-Dep Node.js)"]
+    B -->|"batonflow --tier high --task ..."| C["batonflow Scheduler (Zero-Dep Node.js)"]
     C -->|"1st Executor"| E1["Codex CLI"]
     E1 -->|"Exit 0"| V["Planner Audits git diff + Runs Tests"]
     E1 -->|"429 / Rate Limit / Weekly Limit"| E2["Backup Executor: Claude Code"]
@@ -53,57 +53,57 @@ flowchart TD
 
 ```bash
 # Option A: Global install via npm
-npm install -g agent-baton
+npm install -g batonflow
 
 # Option B: Zero-install one-off via npx
-npx agent-baton init
+npx batonflow init
 
 # Option C: From source (no npm install needed)
-git clone https://github.com/wenzhang1/agent-baton.git
-cd agent-baton && npm link
+git clone https://github.com/wenzhang1/batonflow.git
+cd batonflow && npm link
 ```
 
 ### 2. Initialize Inside Any Project
 
 ```bash
 cd /path/to/your-project
-agent-baton init
-# Optional: agent-baton init --adapter antigravity | claude-code | all | none
+batonflow init
+# Optional: batonflow init --adapter antigravity | claude-code | all | none
 ```
 
-`agent-baton init` safely creates:
-- `agent-baton.config.json` (never overwrites existing without `--force`)
-- `.agent-baton/WORKFLOW.md` (standard Planner rules)
+`batonflow init` safely creates:
+- `batonflow.config.json` (never overwrites existing without `--force`)
+- `.batonflow/WORKFLOW.md` (standard Planner rules)
 - `PLAN.md` (task board & checkpoint recovery log)
-- `.agent/rules/agent-baton.md` (Antigravity adapter)
-- Appends an idempotent marker block (`<!-- agent-baton:start --> ... <!-- agent-baton:end -->`) to `CLAUDE.md` without overwriting your existing rules, plus `.claude/settings.json` allowlist (if not already present)
-- Appends `.agent-baton/logs/` and `.agent-baton/*.json` to `.gitignore`
+- `.agent/rules/batonflow.md` (Antigravity adapter)
+- Appends an idempotent marker block (`<!-- batonflow:start --> ... <!-- batonflow:end -->`) to `CLAUDE.md` without overwriting your existing rules, plus `.claude/settings.json` allowlist (if not already present)
+- Appends `.batonflow/logs/` and `.batonflow/*.json` to `.gitignore`
 
 ### 3. Try Built-in Mock Relay (Zero API Cost)
 
 ```bash
 # Simulate Codex hitting a 5-hour 429 rate limit -> automatic handoff to Claude
-agent-baton --mock failover --tier high --task "Implement JWT refresh middleware"
+batonflow --mock failover --tier high --task "Implement JWT refresh middleware"
 
 # Simulate all executors hitting weekly quota -> exit 3 + next_action=planner_takeover
-agent-baton --mock weekly-limit --tier high --task "Migrate database schema"
+batonflow --mock weekly-limit --tier high --task "Migrate database schema"
 
 # Simulate auto_wait recovery -> sleeps 1s and auto-retries to exit 0
-agent-baton --mock auto-wait --tier low --task "Add unit tests"
+batonflow --mock auto-wait --tier low --task "Add unit tests"
 ```
 
 ### 4. Dry-Run Verify
 
 ```bash
 cd /path/to/your-project
-agent-baton --dry-run --tier high --task "Verify executor chain and model routing"
+batonflow --dry-run --tier high --task "Verify executor chain and model routing"
 ```
 
 ---
 
-## Configuration Reference (`agent-baton.config.json`)
+## Configuration Reference (`batonflow.config.json`)
 
-See [`agent-baton.config.example.json`](agent-baton.config.example.json) for the full template.
+See [`batonflow.config.example.json`](batonflow.config.example.json) for the full template.
 
 ### Core Sections
 
@@ -134,7 +134,7 @@ See [`agent-baton.config.example.json`](agent-baton.config.example.json) for the
 
 ### 3-Mode Exhaustion Policy (`short_limit` vs `weekly_limit`)
 
-`agent-baton` matches CLI failures against `weekly_limit_patterns` first, then `rate_limit_patterns`. When all executors in `executor_chain` are exhausted, it applies your configured policy:
+`batonflow` matches CLI failures against `weekly_limit_patterns` first, then `rate_limit_patterns`. When all executors in `executor_chain` are exhausted, it applies your configured policy:
 
 ```json
 "exhaustion_policy": {
@@ -155,7 +155,7 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 | :--- | :--- | :--- |
 | **`"planner_takeover"`** | Emits `next_action=planner_takeover`. Planner immediately finishes remaining `PLAN.md` tasks with its native tools. | **Default for `weekly_limit`** (quota won't reset for days) |
 | **`"manual_pause"`** | Emits `next_action=manual_pause` + `reset_hint`. Planner cleans dirty diff, marks `[!]` in `PLAN.md`, and pauses for you to resume manually. | **Default for `short_limit`** (wait for 5h window) or users who want to protect Planner quota on `weekly_limit` |
-| **`"auto_wait"`** | `agent-baton` parses reset time from CLI stderr (or uses `poll_interval_seconds`), sleeps up to `max_wait_seconds`, and automatically retries the chain. Falls back to `on_timeout` if still exhausted. | Unattended / overnight runs waiting through a 5-hour rolling reset |
+| **`"auto_wait"`** | `batonflow` parses reset time from CLI stderr (or uses `poll_interval_seconds`), sleeps up to `max_wait_seconds`, and automatically retries the chain. Falls back to `on_timeout` if still exhausted. | Unattended / overnight runs waiting through a 5-hour rolling reset |
 
 ### CLI Commands, Flags & Exit Codes
 
@@ -169,7 +169,7 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 | `--config <path>` | Custom config file path |
 | `--dry-run` | Show resolved chain, models, and commands without executing |
 | `--mock [scenario]` | Zero-API demo (`failover`, `success`, `short-limit`, `weekly-limit`, `error`, `auto-wait`) |
-| `--status` | Inspect active cooldowns in `.agent-baton/state.json` and policies |
+| `--status` | Inspect active cooldowns in `.batonflow/state.json` and policies |
 | `--reset-state` | Clear saved cooldowns immediately |
 | `--ignore-cooldown` | Bypass active cooldowns for this run |
 | `--no-prefix` | Omit `executor_prompt_prefix` for this run |
@@ -181,21 +181,21 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 | **`2`** | All executors unavailable/exhausted, with at least one **short-term / 5-hour** limit |
 | **`3`** | All usable executors exhausted by **weekly / hard quota** limits |
 
-On exit `2` or `3`, `agent-baton` always prints a machine-readable directive to `stderr`:
+On exit `2` or `3`, `batonflow` always prints a machine-readable directive to `stderr`:
 
 ```text
-[agent-baton] RESULT exit=3 limit_type=weekly_limit next_action=planner_takeover reset_hint="resets on Monday" executors=codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit
+[batonflow] RESULT exit=3 limit_type=weekly_limit next_action=planner_takeover reset_hint="resets on Monday" executors=codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit
 ```
 
 ---
 
 ## Safe Coexistence with Existing `AGENTS.md` / `CLAUDE.md`
 
-When a Planner invokes an Executor (e.g., `claude` or `codex`) inside the same repository, the Executor automatically reads the project's `AGENTS.md` / `CLAUDE.md`. `agent-baton` prevents role confusion and recursive loops via three layers:
+When a Planner invokes an Executor (e.g., `claude` or `codex`) inside the same repository, the Executor automatically reads the project's `AGENTS.md` / `CLAUDE.md`. `batonflow` prevents role confusion and recursive loops via three layers:
 
-1. **Non-destructive initialization**: `agent-baton init` never overwrites `CLAUDE.md`; it appends/updates a short marker block (`<!-- agent-baton:start --> ... <!-- agent-baton:end -->`).
-2. **Automatic Executor preamble**: Prepends `[AGENT_BATON_EXECUTOR_MODE]` instructing the Executor to follow the repo's coding conventions while editing files directly and never touching `PLAN.md`.
-3. **Hard recursion lock**: `agent-baton` injects `AGENT_BATON_ROLE=executor` and `AGENT_BATON_DEPTH=1` into child environments and immediately blocks any nested `agent-baton` call.
+1. **Non-destructive initialization**: `batonflow init` never overwrites `CLAUDE.md`; it appends/updates a short marker block (`<!-- batonflow:start --> ... <!-- batonflow:end -->`).
+2. **Automatic Executor preamble**: Prepends `[BATONFLOW_EXECUTOR_MODE]` instructing the Executor to follow the repo's coding conventions while editing files directly and never touching `PLAN.md`.
+3. **Hard recursion lock**: `batonflow` injects `BATONFLOW_ROLE=executor` and `BATONFLOW_DEPTH=1` into child environments and immediately blocks any nested `batonflow` call.
 
 ---
 
@@ -204,18 +204,18 @@ When a Planner invokes an Executor (e.g., `claude` or `codex`) inside the same r
 1. **Antigravity (Planner) → Codex → Claude → Gemini (Executors)**
    - Antigravity decomposes architecture into `PLAN.md`, dispatches high-complexity tasks with `--tier high` and boilerplate with `--tier low`, audits every `git diff`, runs tests, and commits checkpoints.
 2. **Claude Code (Planner) → Codex → Gemini (Executors)**
-   - Install with `agent-baton init --adapter claude-code`. Claude Code stays focused on planning and verification while delegating heavy implementation loops to Codex and Gemini.
+   - Install with `batonflow init --adapter claude-code`. Claude Code stays focused on planning and verification while delegating heavy implementation loops to Codex and Gemini.
 3. **5-Hour Limit Pause vs Weekly Limit Takeover**
    - When Codex + Claude + Gemini all hit 5-hour limits (`exit 2`), `PLAN.md` marks `[!]` with the reset hint (or auto-waits if `short_limit: "auto_wait"`).
    - When all external CLIs hit weekly quota (`exit 3`), the Planner receives `next_action=planner_takeover` and finishes the remaining `PLAN.md` tasks seamlessly.
 4. **Cross-Client Handoff**
-   - Close Antigravity, open Claude Code (or vice versa), point it at `.agent-baton/WORKFLOW.md` + `PLAN.md`. Git history + `PLAN.md` Recovery Log restore 100% of context immediately.
+   - Close Antigravity, open Claude Code (or vice versa), point it at `.batonflow/WORKFLOW.md` + `PLAN.md`. Git history + `PLAN.md` Recovery Log restore 100% of context immediately.
 
 ---
 
 ## Adding a New AI CLI Executor
 
-Adding any CLI (e.g., Aider, OpenCode, Qwen Code, or a custom script) requires **zero code changes**—just add it to `agent-baton.config.json`:
+Adding any CLI (e.g., Aider, OpenCode, Qwen Code, or a custom script) requires **zero code changes**—just add it to `batonflow.config.json`:
 
 ```json
 {
@@ -243,7 +243,7 @@ npm pack --dry-run
 ```
 
 Maintainers publish new versions via **npm Trusted Publishing (OIDC)**—no long-lived `NPM_TOKEN` secrets required—gated by the protected `npm-release` GitHub Environment (`.github/workflows/publish.yml`):
-1. **First-time bootstrap (`v0.1.0`)**: Run `npm login && npm publish --access public` once locally, then bind GitHub Actions under `npmjs.com/package/agent-baton/access` → **Trusted Publisher** (`wenzhang1` / `agent-baton` / `publish.yml` / `npm-release`).
+1. **First-time bootstrap (`v0.1.0`)**: Run `npm login && npm publish --access public` once locally, then bind GitHub Actions under `npmjs.com/package/batonflow/access` → **Trusted Publisher** (`wenzhang1` / `batonflow` / `publish.yml` / `npm-release`).
 2. **All subsequent releases**: Bump `"version"` in `package.json` via PR to `main`, push a matching tag (`git tag v0.1.1 && git push origin v0.1.1`), and approve the deployment gate in **Actions → Publish to npm** (`npm-release`).
 
 ---

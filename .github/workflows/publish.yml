@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     # Protected environment with Required Reviewers (Settings -> Environments -> npm-release).
     # Configure matching Trusted Publisher on npmjs.com -> package Settings -> Trusted Publisher:
-    #   Owner: wenzhang1 | Repo: agent-baton | Workflow: publish.yml | Environment: npm-release
+    #   Owner: wenzhang1 | Repo: batonflow | Workflow: publish.yml | Environment: npm-release
     environment: npm-release
     permissions:
       contents: read

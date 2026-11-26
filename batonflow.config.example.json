@@ -1,5 +1,5 @@
 {
-  "$schema_comment": "agent-baton configuration example. Copy to agent-baton.config.json (or run `agent-baton init`) and customize models/commands for your local AI CLIs.",
+  "$schema_comment": "batonflow configuration example. Copy to batonflow.config.json (or run `batonflow init`) and customize models/commands for your local AI CLIs.",
   "executor_chain": [
     "codex",
     "claude",
@@ -81,7 +81,7 @@
     "weekly_limit": 86400
   },
   "timeout_seconds": 600,
-  "log_dir": ".agent-baton/logs",
-  "state_file": ".agent-baton/state.json",
-  "executor_prompt_prefix": "[AGENT_BATON_EXECUTOR_MODE] You are acting strictly as a code Executor for this single task. Follow the repository's coding standards (AGENTS.md / CLAUDE.md), implement the task directly, do NOT invoke agent-baton, and do NOT modify PLAN.md.\n\n"
+  "log_dir": ".batonflow/logs",
+  "state_file": ".batonflow/state.json",
+  "executor_prompt_prefix": "[BATONFLOW_EXECUTOR_MODE] You are acting strictly as a code Executor for this single task. Follow the repository's coding standards (AGENTS.md / CLAUDE.md), implement the task directly, do NOT invoke batonflow, and do NOT modify PLAN.md.\n\n"
 }

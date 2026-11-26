@@ -1,9 +1,9 @@
-# Agent-Baton runtime artifacts (logs & cooldown/mock state)
-.agent-baton/logs/
-.agent-baton/*.json
+# BatonFlow runtime artifacts (logs & cooldown/mock state)
+.batonflow/logs/
+.batonflow/*.json
 
-# User-local config (keep agent-baton.config.example.json tracked)
-agent-baton.config.json
+# User-local config (keep batonflow.config.example.json tracked)
+batonflow.config.json
 
 # OS & editor junk
 .DS_Store
@@ -13,6 +13,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Node (kept clean even though agent-baton has zero dependencies)
+# Node (kept clean even though batonflow has zero dependencies)
 node_modules/
 npm-debug.log*

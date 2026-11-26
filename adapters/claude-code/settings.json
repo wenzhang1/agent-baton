@@ -1,8 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(agent-baton:*)",
-      "Bash(./bin/agent-baton:*)",
+      "Bash(batonflow:*)",
+      "Bash(./bin/batonflow:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",

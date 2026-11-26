@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in agent-baton's scheduler, rate-limit detection, failover, or init command.
+description: Report a bug in batonflow's scheduler, rate-limit detection, failover, or init command.
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -17,7 +17,7 @@ body:
       label: Steps to Reproduce
       description: Exact command(s) or scenario that triggered the issue.
       placeholder: |
-        1. Run `agent-baton --tier high --task "..."`
+        1. Run `batonflow --tier high --task "..."`
         2. Codex hits a 429 rate limit
         3. Observe unexpected exit code / behavior
     validations:
@@ -27,7 +27,7 @@ body:
     id: expected
     attributes:
       label: Expected vs Actual Behavior
-      description: What did you expect `agent-baton` to do, and what happened instead?
+      description: What did you expect `batonflow` to do, and what happened instead?
     validations:
       required: true
 
@@ -43,5 +43,5 @@ body:
     id: config_and_logs
     attributes:
       label: Sanitized Config & Log Excerpt
-      description: Please remove any secrets/API keys before pasting `agent-baton.config.json` or `.agent-baton/logs/*.log`.
+      description: Please remove any secrets/API keys before pasting `batonflow.config.json` or `.batonflow/logs/*.log`.
       render: text
