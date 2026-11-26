@@ -24,7 +24,7 @@ Usage:
   ./scripts/init.sh [target-project-dir] [options]
 
 Options:
-  --adapter <mode>   Adapter templates to install: antigravity | claude-code | all | none (default: all)
+  --adapter <mode>   Adapter templates to install: antigravity | claude-code | codex | all | none (default: all)
   --force            Overwrite existing batonflow.config.json, PLAN.md, and adapter files
   -h, --help         Show this help message
 
@@ -72,9 +72,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "${ADAPTER}" in
-  antigravity|claude-code|all|none) ;;
+  antigravity|claude-code|codex|all|none) ;;
   *)
-    echo "Error: Invalid --adapter value '${ADAPTER}'. Expected: antigravity | claude-code | all | none" >&2
+    echo "Error: Invalid --adapter value '${ADAPTER}'. Expected: antigravity | claude-code | codex | all | none" >&2
     exit 1
     ;;
 esac
@@ -154,11 +154,16 @@ copy_safe "${REPO_ROOT}/templates/PLAN.md" "${TARGET_DIR}/PLAN.md" "PLAN.md"
 append_gitignore_entry ".batonflow/logs/"
 append_gitignore_entry ".batonflow/*.json"
 
+if [[ "${ADAPTER}" == "antigravity" || "${ADAPTER}" == "codex" || "${ADAPTER}" == "all" ]]; then
+  copy_safe "${REPO_ROOT}/skills/batonflow/SKILL.md" "${TARGET_DIR}/.agents/skills/batonflow/SKILL.md" ".agents/skills/batonflow/SKILL.md"
+fi
+
 if [[ "${ADAPTER}" == "antigravity" || "${ADAPTER}" == "all" ]]; then
   copy_safe "${REPO_ROOT}/adapters/antigravity/rules.md" "${TARGET_DIR}/.agent/rules/batonflow.md" ".agent/rules/batonflow.md"
 fi
 
 if [[ "${ADAPTER}" == "claude-code" || "${ADAPTER}" == "all" ]]; then
+  copy_safe "${REPO_ROOT}/skills/batonflow/SKILL.md" "${TARGET_DIR}/.claude/skills/batonflow/SKILL.md" ".claude/skills/batonflow/SKILL.md"
   merge_claude_md_snippet
   if [[ -f "${TARGET_DIR}/.claude/settings.json" && "${FORCE}" -ne 1 ]]; then
     echo "  [skip]   .claude/settings.json already exists — merge permissions from ${REPO_ROOT}/adapters/claude-code/settings.json manually"

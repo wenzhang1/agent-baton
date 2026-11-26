@@ -12,7 +12,7 @@ English | [简体中文](README.zh-CN.md)
 - **Capability tier routing (`high` / `low`)**: Dynamically maps abstract tiers to the right model per CLI.
 - **Layered rate-limit detection & automatic failover**: Distinguishes **5-hour rolling / short-term limits** (`short_limit`) from **weekly / billing hard quotas** (`weekly_limit`), handing off automatically along `executor_chain`.
 - **3-mode exhaustion policy**: Independently configure **`planner_takeover`**, **`manual_pause`**, or **`auto_wait`** (with smart reset-time parsing & automatic retry) for both short-term and weekly limits.
-- **One-command project setup (`batonflow init`)**: Enter any project and run `batonflow init` to scaffold config, workflow, task board, and client adapters safely.
+- **One-command project setup (`batonflow init`)**: Enter any project and run `batonflow init` to scaffold config, workflow, task board, and a **universal cross-client Agent Skill** (`skills/batonflow/SKILL.md` installed to `.agents/skills/` and `.claude/skills/`, plus `batonflow init --global-skill` for machine-wide discovery across Antigravity, Claude Code, Codex, Gemini CLI, Cursor, and OpenCode).
 - **Cross-client checkpoint resume**: Git commits + `PLAN.md` preserve exact state so any Planner client can resume seamlessly with zero lost context.
 - **Safe coexistence with `AGENTS.md` / `CLAUDE.md`**: Three-layer anti-collision protection (idempotent marker append, `[BATONFLOW_EXECUTOR_MODE]` preamble, and hard `BATONFLOW_DEPTH` recursion lock).
 
@@ -68,16 +68,24 @@ cd batonflow && npm link
 ```bash
 cd /path/to/your-project
 batonflow init
-# Optional: batonflow init --adapter antigravity | claude-code | all | none
+# Optional: batonflow init --adapter antigravity | claude-code | codex | all | none
+
+# Optional: Install the universal Agent Skill globally (once, for all repositories & clients)
+batonflow init --global-skill
+# Or target a single client: batonflow init --global-skill antigravity | claude-code | codex
 ```
 
 `batonflow init` safely creates:
 - `batonflow.config.json` (never overwrites existing without `--force`)
 - `.batonflow/WORKFLOW.md` (standard Planner rules)
 - `PLAN.md` (task board & checkpoint recovery log)
-- `.agent/rules/batonflow.md` (Antigravity adapter)
-- Appends an idempotent marker block (`<!-- batonflow:start --> ... <!-- batonflow:end -->`) to `CLAUDE.md` without overwriting your existing rules, plus `.claude/settings.json` allowlist (if not already present)
+- `.agents/skills/batonflow/SKILL.md` (**Universal Agent Skill** for Antigravity, Codex, Gemini CLI, Cursor, OpenCode) & `.agent/rules/batonflow.md`
+- `.claude/skills/batonflow/SKILL.md` (**Claude Code Skill**, invocable via `/batonflow`), idempotent `CLAUDE.md` marker block (`<!-- batonflow:start --> ... <!-- batonflow:end -->`), and `.claude/settings.json` allowlist (if not already present)
 - Appends `.batonflow/logs/` and `.batonflow/*.json` to `.gitignore`
+
+> **How to use after `batonflow init`?** Just open the project in **Antigravity, Claude Code, Codex, or Cursor** and say: *"Use batonflow to break down `<your feature>` into `PLAN.md` and dispatch it."* Normal everyday chats are never interrupted—the universal Skill only activates when you invoke `batonflow` or `PLAN.md`.
+>
+> See the full step-by-step walkthrough with real prompt & failover examples in **[examples/USAGE_GUIDE.md](examples/USAGE_GUIDE.md)** ([中文实战指南](examples/USAGE_GUIDE.zh-CN.md)).
 
 ### 3. Try Built-in Mock Relay (Zero API Cost)
 
@@ -161,7 +169,8 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 
 | Command / Flag | Description |
 | :--- | :--- |
-| `init [dir] [--adapter ...] [--force]` | Initialize config, templates, and adapters into current directory (default) or `dir` |
+| `init [dir] [--adapter ...] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
+| `init --global-skill [target] [--force]` | Install the universal Skill globally (`all` / `antigravity` / `claude-code` / `codex`) without creating project files |
 | `--tier <high\|low>` | Capability tier to route (required for task dispatch) |
 | `--task "<text>"` | Inline task prompt |
 | `--task-file <path\|->` | Read multi-line prompt from file or stdin (`-`) |

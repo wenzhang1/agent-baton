@@ -155,6 +155,8 @@ async function main() {
         packageRoot: PROJECT_ROOT,
         targetDir: opts.targetDir,
         adapter: opts.adapter,
+        globalSkill: opts.globalSkill,
+        globalSkillTarget: opts.globalSkillTarget,
         force: opts.force,
         cwd: process.cwd(),
       });
