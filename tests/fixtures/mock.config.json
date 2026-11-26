@@ -1,0 +1,68 @@
+{
+  "executor_chain": [
+    "codex",
+    "claude",
+    "gemini"
+  ],
+  "tiers": {
+    "high": {
+      "codex": "codex-pro-high",
+      "claude": "claude-opus-high",
+      "gemini": "gemini-pro-high"
+    },
+    "low": {
+      "codex": "codex-mini-low",
+      "claude": "claude-sonnet-low",
+      "gemini": "gemini-flash-low"
+    }
+  },
+  "commands": {
+    "codex": [
+      "node",
+      "tests/mock-executor.mjs",
+      "--executor",
+      "codex",
+      "--model",
+      "{{model}}",
+      "--task",
+      "{{task}}"
+    ],
+    "claude": [
+      "node",
+      "tests/mock-executor.mjs",
+      "--executor",
+      "claude",
+      "--model",
+      "{{model}}",
+      "--task",
+      "{{task}}"
+    ],
+    "gemini": [
+      "node",
+      "tests/mock-executor.mjs",
+      "--executor",
+      "gemini",
+      "--model",
+      "{{model}}",
+      "--task",
+      "{{task}}"
+    ]
+  },
+  "exhaustion_policy": {
+    "short_limit": "manual_pause",
+    "weekly_limit": "planner_takeover",
+    "auto_wait": {
+      "poll_interval_seconds": 1,
+      "max_wait_seconds": 3,
+      "buffer_seconds": 0,
+      "on_timeout": "manual_pause"
+    }
+  },
+  "cooldown_seconds": {
+    "short_limit": 60,
+    "weekly_limit": 3600
+  },
+  "timeout_seconds": 15,
+  "log_dir": ".codebaton/test-logs",
+  "state_file": ".codebaton/test-state.json"
+}

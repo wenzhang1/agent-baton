@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [18, 20, 22]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Run zero-dependency mock test suite
+        run: node tests/run-tests.mjs
+
+      - name: Smoke test scripts/init.sh idempotency
+        run: |
+          TMPDIR_INIT="$(mktemp -d)"
+          printf '# Existing Rules\nKeep it clean.\n' > "$TMPDIR_INIT/CLAUDE.md"
+          ./scripts/init.sh "$TMPDIR_INIT" --adapter all
+          ./scripts/init.sh "$TMPDIR_INIT" --adapter all
+          grep -q "Existing Rules" "$TMPDIR_INIT/CLAUDE.md"
+          grep -q "<!-- codebaton:start -->" "$TMPDIR_INIT/CLAUDE.md"
+          test -f "$TMPDIR_INIT/codebaton.config.json"
+          test -f "$TMPDIR_INIT/.codebaton/WORKFLOW.md"
+          test -f "$TMPDIR_INIT/PLAN.md"
+          test -f "$TMPDIR_INIT/.agent/rules/codebaton.md"
+          test -f "$TMPDIR_INIT/.claude/settings.json"
+          rm -rf "$TMPDIR_INIT"

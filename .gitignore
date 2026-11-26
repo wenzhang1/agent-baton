@@ -1,0 +1,18 @@
+# CodeBaton runtime artifacts (logs & cooldown state)
+.codebaton/logs/
+.codebaton/state.json
+
+# User-local config (keep codebaton.config.example.json tracked)
+codebaton.config.json
+
+# OS & editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Node (kept clean even though codebaton has zero dependencies)
+node_modules/
+npm-debug.log*

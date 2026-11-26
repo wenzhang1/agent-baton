@@ -1,0 +1,29 @@
+{
+  "executors": {
+    "claude": {
+      "limit_type": "short_limit",
+      "hit_at": "2026-11-26T12:07:33.851Z",
+      "cooldown_until": "2026-11-26T12:52:33.851Z",
+      "reset_hint": "try again in 45 minutes",
+      "matched_pattern": "\\b429\\b",
+      "log_path": "/Users/wenzhang/workspace/codebaton/.codebaton/logs/2026-11-26T12-07-33-761Z-claude-low.log"
+    },
+    "gemini": {
+      "limit_type": "short_limit",
+      "hit_at": "2026-11-26T12:07:33.936Z",
+      "cooldown_until": "2026-11-26T12:52:33.936Z",
+      "reset_hint": "try again in 45 minutes",
+      "matched_pattern": "\\b429\\b",
+      "log_path": "/Users/wenzhang/workspace/codebaton/.codebaton/logs/2026-11-26T12-07-33-852Z-gemini-low.log"
+    }
+  },
+  "last_result": {
+    "timestamp": "2026-11-26T12:07:35.038Z",
+    "exit_code": 0,
+    "executor": "codex",
+    "model": "mock-codex-low",
+    "tier": "low",
+    "duration_ms": 99,
+    "log_path": "/Users/wenzhang/workspace/codebaton/.codebaton/logs/2026-11-26T12-07-34-939Z-codex-low.log"
+  }
+}

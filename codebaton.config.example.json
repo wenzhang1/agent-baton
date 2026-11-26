@@ -1,0 +1,87 @@
+{
+  "$schema_comment": "CodeBaton configuration example. Copy to codebaton.config.json and customize models/commands for your local AI CLIs.",
+  "executor_chain": [
+    "codex",
+    "claude",
+    "gemini"
+  ],
+  "tiers": {
+    "high": {
+      "codex": "gpt-5.3-codex",
+      "claude": "claude-opus-4-6",
+      "gemini": "gemini-2.5-pro"
+    },
+    "low": {
+      "codex": "gpt-5.1-codex-mini",
+      "claude": "claude-sonnet-4-6",
+      "gemini": "gemini-2.5-flash"
+    }
+  },
+  "commands": {
+    "codex": [
+      "codex",
+      "exec",
+      "-m",
+      "{{model}}",
+      "{{task}}"
+    ],
+    "claude": [
+      "claude",
+      "-p",
+      "--model",
+      "{{model}}",
+      "{{task}}"
+    ],
+    "gemini": [
+      "gemini",
+      "-p",
+      "-m",
+      "{{model}}",
+      "{{task}}"
+    ]
+  },
+  "weekly_limit_patterns": [
+    "weekly[\\s_-]*(usage[\\s_-]*)?(limit|quota|cap)",
+    "7[\\s-]*day[\\s_-]*(limit|quota)",
+    "monthly[\\s_-]*(usage[\\s_-]*)?(limit|quota)",
+    "insufficient_quota",
+    "credit balance is too low",
+    "out of credits",
+    "billing[\\s_-]*(limit|hard limit)",
+    "exceeded your current quota",
+    "resets?\\s+(on\\s+)?(mon|tue|wed|thu|fri|sat|sun)(day)?",
+    "try again in\\s+\\d+\\s+days?"
+  ],
+  "rate_limit_patterns": [
+    "\\b429\\b",
+    "rate[\\s_-]*limit",
+    "too many requests",
+    "usage[\\s_-]*limit",
+    "quota[\\s_-]*exceeded",
+    "5[\\s-]*hour[\\s_-]*(limit|window|quota)",
+    "five[\\s-]*hour",
+    "hit your limit",
+    "limit reached",
+    "overloaded_error",
+    "resource_exhausted",
+    "try again in\\s+\\d+\\s*(sec|second|min|minute|hr|hour)s?"
+  ],
+  "exhaustion_policy": {
+    "short_limit": "manual_pause",
+    "weekly_limit": "planner_takeover",
+    "auto_wait": {
+      "poll_interval_seconds": 900,
+      "max_wait_seconds": 21600,
+      "buffer_seconds": 30,
+      "on_timeout": "manual_pause"
+    }
+  },
+  "cooldown_seconds": {
+    "short_limit": 900,
+    "weekly_limit": 86400
+  },
+  "timeout_seconds": 600,
+  "log_dir": ".codebaton/logs",
+  "state_file": ".codebaton/state.json",
+  "executor_prompt_prefix": "[CODEBATON_EXECUTOR_MODE] You are acting strictly as a code Executor for this single task. Follow the repository's coding standards (AGENTS.md / CLAUDE.md), implement the task directly, do NOT invoke codebaton, and do NOT modify PLAN.md.\n\n"
+}

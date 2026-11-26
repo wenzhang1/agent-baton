@@ -1,0 +1,6 @@
+<!-- codebaton:start -->
+## CodeBaton Multi-CLI Relay
+
+- **Executor Mode (Auto-Detected)**: If your prompt begins with `[CODEBATON_EXECUTOR_MODE]` or `CODEBATON_ROLE=executor` is set, you are running as a **task Executor**. Follow this repository's coding standards above, implement the requested task directly, do **NOT** invoke `codebaton`, and do **NOT** edit `PLAN.md`.
+- **Planner Mode**: Only when the user explicitly asks to run/resume **CodeBaton** (or work through `PLAN.md` via relay), read `.codebaton/WORKFLOW.md` and `PLAN.md`, dispatch coding tasks with `codebaton --tier <high|low> --task "..."`, verify via `git diff` + tests before committing, and follow the `next_action=` directive on exit codes `2` / `3`.
+<!-- codebaton:end -->

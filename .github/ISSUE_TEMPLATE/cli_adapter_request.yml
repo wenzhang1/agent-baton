@@ -1,0 +1,39 @@
+name: New AI CLI / Client Adapter
+description: Request or contribute support for another AI CLI Executor or Planner client.
+title: "[Adapter]: "
+labels: ["adapter", "enhancement"]
+body:
+  - type: dropdown
+    id: role
+    attributes:
+      label: Integration Type
+      options:
+        - Executor CLI (e.g. Aider, OpenCode, Qwen Code)
+        - Planner Client Adapter (e.g. Cursor, Windsurf, Cline)
+        - Both Planner & Executor
+    validations:
+      required: true
+
+  - type: input
+    id: tool_name
+    attributes:
+      label: Tool / CLI Name & Homepage
+      placeholder: "e.g. OpenCode (https://github.com/...)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command_syntax
+    attributes:
+      label: Non-Interactive CLI Command Template
+      description: How is this CLI invoked non-interactively with a model and task prompt?
+      placeholder: 'e.g. ["opencode", "run", "--model", "{{model}}", "{{task}}"]'
+    validations:
+      required: true
+
+  - type: textarea
+    id: rate_limit_samples
+    attributes:
+      label: Sample Rate-Limit / Quota Error Output
+      description: Share real (sanitized) stderr/stdout snippets for short-term and weekly/hard quota errors so we can verify pattern matching.
+      render: text

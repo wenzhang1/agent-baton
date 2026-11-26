@@ -1,0 +1,274 @@
+#!/usr/bin/env node
+/**
+ * codebaton - Client-decoupled local multi-agent relay scheduler.
+ * Pass the coding baton across any AI CLI—with automatic failover and zero lost context.
+ */
+
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { HELP_TEXT, VERSION, parseArgs, resolveTaskText } from '../lib/cli.mjs';
+import { DEFAULT_CONFIG, loadConfig } from '../lib/config.mjs';
+import {
+  EXIT_ERROR,
+  EXIT_OK,
+  buildExecutionPlan,
+  loadState,
+  resetState,
+  runRelay,
+} from '../lib/failover.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+
+/**
+ * Build an ephemeral zero-API-cost mock configuration that routes to tests/mock-executor.mjs.
+ */
+function buildMockSetup(scenario) {
+  const mockScript = path.join(PROJECT_ROOT, 'tests', 'mock-executor.mjs');
+  const nodeBin = process.execPath;
+
+  const scenarioConfigs = {
+    success: {
+      env: { CODEBATON_MOCK_BEHAVIOR: 'codex:ok,claude:ok,gemini:ok' },
+      policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
+    },
+    failover: {
+      env: { CODEBATON_MOCK_BEHAVIOR: 'codex:short_limit,claude:ok,gemini:ok' },
+      policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
+    },
+    'short-limit': {
+      env: { CODEBATON_MOCK_BEHAVIOR: 'codex:short_limit,claude:short_limit,gemini:short_limit' },
+      policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
+    },
+    'weekly-limit': {
+      env: { CODEBATON_MOCK_BEHAVIOR: 'codex:weekly_limit,claude:weekly_limit,gemini:weekly_limit' },
+      policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
+    },
+    error: {
+      env: { CODEBATON_MOCK_BEHAVIOR: 'codex:error,claude:ok,gemini:ok' },
+      policy: { short_limit: 'manual_pause', weekly_limit: 'planner_takeover' },
+    },
+    'auto-wait': {
+      env: { CODEBATON_MOCK_BEHAVIOR: 'codex:short_limit_once,claude:short_limit,gemini:short_limit' },
+      policy: {
+        short_limit: 'auto_wait',
+        weekly_limit: 'planner_takeover',
+        auto_wait: {
+          poll_interval_seconds: 1,
+          max_wait_seconds: 5,
+          buffer_seconds: 0,
+          on_timeout: 'manual_pause',
+        },
+      },
+    },
+  };
+
+  const preset = scenarioConfigs[scenario] || scenarioConfigs.failover;
+
+  const config = {
+    ...DEFAULT_CONFIG,
+    executor_chain: ['codex', 'claude', 'gemini'],
+    tiers: {
+      high: {
+        codex: 'mock-codex-high',
+        claude: 'mock-claude-high',
+        gemini: 'mock-gemini-high',
+      },
+      low: {
+        codex: 'mock-codex-low',
+        claude: 'mock-claude-low',
+        gemini: 'mock-gemini-low',
+      },
+    },
+    commands: {
+      codex: [nodeBin, mockScript, '--executor', 'codex', '--model', '{{model}}', '--task', '{{task}}'],
+      claude: [nodeBin, mockScript, '--executor', 'claude', '--model', '{{model}}', '--task', '{{task}}'],
+      gemini: [nodeBin, mockScript, '--executor', 'gemini', '--model', '{{model}}', '--task', '{{task}}'],
+    },
+    exhaustion_policy: {
+      ...DEFAULT_CONFIG.exhaustion_policy,
+      ...preset.policy,
+      auto_wait: {
+        ...DEFAULT_CONFIG.exhaustion_policy.auto_wait,
+        ...(preset.policy.auto_wait || {}),
+      },
+    },
+    state_file: '.codebaton/mock-state.json',
+    log_dir: '.codebaton/logs',
+    timeout_seconds: 30,
+  };
+
+  return { config, extraEnv: preset.env };
+}
+
+function printStatus(config, stateFilePath) {
+  const state = loadState(stateFilePath);
+  const now = Date.now();
+
+  console.log('=== CodeBaton Status ===');
+  console.log(`Executor chain:       ${config.executor_chain.join(' -> ')}`);
+  console.log(`Short limit policy:   ${config.exhaustion_policy.short_limit}`);
+  console.log(`Weekly limit policy:  ${config.exhaustion_policy.weekly_limit}`);
+  console.log(
+    `Auto-wait settings:   poll=${config.exhaustion_policy.auto_wait.poll_interval_seconds}s, max=${config.exhaustion_policy.auto_wait.max_wait_seconds}s, on_timeout=${config.exhaustion_policy.auto_wait.on_timeout}`
+  );
+  console.log('');
+  console.log('Cooldowns:');
+  const entries = Object.entries(state.executors || {});
+  if (entries.length === 0) {
+    console.log('  (none active)');
+  } else {
+    for (const [name, info] of entries) {
+      const remaining = Math.max(0, Math.ceil((Date.parse(info.cooldown_until) - now) / 1000));
+      const status = remaining > 0 ? `${remaining}s remaining` : 'expired';
+      console.log(
+        `  - ${name}: ${info.limit_type} (${status}${info.reset_hint ? `, hint: "${info.reset_hint}"` : ''})`
+      );
+    }
+  }
+  if (state.last_result) {
+    console.log('');
+    console.log('Last result:');
+    console.log(`  ${JSON.stringify(state.last_result)}`);
+  }
+}
+
+async function main() {
+  let opts;
+  try {
+    opts = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    process.stderr.write(`[codebaton] ERROR: ${err.message}\n`);
+    process.exit(EXIT_ERROR);
+  }
+
+  if (opts.help) {
+    process.stdout.write(HELP_TEXT);
+    process.exit(EXIT_OK);
+  }
+
+  if (opts.version) {
+    console.log(`codebaton ${VERSION}`);
+    process.exit(EXIT_OK);
+  }
+
+  // Hard recursion guard: prevent an Executor CLI from recursively invoking codebaton
+  // if the target repo's CLAUDE.md / AGENTS.md also contains Planner rules.
+  const depth = Number.parseInt(process.env.CODEBATON_DEPTH || '0', 10) || 0;
+  const allowNested = process.env.CODEBATON_ALLOW_NESTED === '1';
+  if (!allowNested && !opts.status && !opts.resetState && (depth >= 1 || process.env.CODEBATON_ROLE === 'executor')) {
+    process.stderr.write(
+      '[codebaton] ERROR: Nested codebaton invocation blocked (CODEBATON_ROLE=executor). ' +
+        'You are running as a task Executor—edit repository files directly instead of calling codebaton.\n'
+    );
+    process.exit(EXIT_ERROR);
+  }
+
+  const cwd = process.cwd();
+
+  if (opts.resetState) {
+    try {
+      const { config } = loadConfig({ configPath: opts.configPath, allowExampleFallback: true, cwd });
+      const statePath = path.resolve(cwd, config.state_file);
+      const removed = resetState(statePath);
+      console.log(removed ? `Cleared state: ${statePath}` : `No state file to clear (${statePath})`);
+      process.exit(EXIT_OK);
+    } catch (err) {
+      process.stderr.write(`[codebaton] ERROR: ${err.message}\n`);
+      process.exit(EXIT_ERROR);
+    }
+  }
+
+  if (opts.status) {
+    try {
+      const { config } = loadConfig({ configPath: opts.configPath, allowExampleFallback: true, cwd });
+      printStatus(config, path.resolve(cwd, config.state_file));
+      process.exit(EXIT_OK);
+    } catch (err) {
+      process.stderr.write(`[codebaton] ERROR: ${err.message}\n`);
+      process.exit(EXIT_ERROR);
+    }
+  }
+
+  // Task dispatch flow
+  let taskText;
+  try {
+    taskText = resolveTaskText(opts);
+  } catch (err) {
+    process.stderr.write(`[codebaton] ERROR: ${err.message}\n`);
+    process.exit(EXIT_ERROR);
+  }
+
+  if (!opts.tier) {
+    process.stderr.write('[codebaton] ERROR: --tier <high|low> is required.\n');
+    process.exit(EXIT_ERROR);
+  }
+  if (!taskText) {
+    process.stderr.write('[codebaton] ERROR: --task "<description>" or --task-file <path> is required.\n');
+    process.exit(EXIT_ERROR);
+  }
+
+  let config;
+  let extraEnv = {};
+
+  try {
+    if (opts.mock) {
+      const mockSetup = buildMockSetup(opts.mockScenario);
+      config = mockSetup.config;
+      extraEnv = {
+        ...mockSetup.extraEnv,
+        CODEBATON_MOCK_STATE_FILE: path.resolve(cwd, '.codebaton/mock-counter.json'),
+      };
+      // Reset mock state before each --mock demo run so results are reproducible.
+      resetState(path.resolve(cwd, config.state_file));
+      resetState(extraEnv.CODEBATON_MOCK_STATE_FILE);
+      process.stderr.write(`[codebaton] MOCK MODE: scenario="${opts.mockScenario}"\n`);
+    } else {
+      const loaded = loadConfig({
+        configPath: opts.configPath,
+        allowExampleFallback: opts.dryRun,
+        cwd,
+      });
+      config = loaded.config;
+    }
+
+    if (opts.dryRun) {
+      const { steps } = buildExecutionPlan({
+        config,
+        tier: opts.tier,
+        forcedExecutor: opts.executor,
+        taskText,
+        noPrefix: opts.noPrefix,
+      });
+      console.log('=== CodeBaton Dry Run ===');
+      console.log(`Tier:                ${opts.tier}`);
+      console.log(`Short limit policy:  ${config.exhaustion_policy.short_limit}`);
+      console.log(`Weekly limit policy: ${config.exhaustion_policy.weekly_limit}`);
+      console.log(`Timeout:             ${config.timeout_seconds}s`);
+      console.log('Execution plan:');
+      steps.forEach((step, idx) => {
+        console.log(`  ${idx + 1}. [${step.executor}] model=${step.model}`);
+        console.log(`     cmd: ${step.display}`);
+      });
+      process.exit(EXIT_OK);
+    }
+
+    const exitCode = await runRelay({
+      config,
+      tier: opts.tier,
+      forcedExecutor: opts.executor,
+      taskText,
+      noPrefix: opts.noPrefix,
+      ignoreCooldown: opts.ignoreCooldown,
+      cwd,
+      extraEnv,
+    });
+    process.exit(exitCode);
+  } catch (err) {
+    process.stderr.write(`[codebaton] ERROR: ${err.message}\n`);
+    process.exit(EXIT_ERROR);
+  }
+}
+
+main();
