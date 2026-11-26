@@ -111,7 +111,9 @@ What your Planner client does automatically:
    - Bundled `--tier low` (default effort `medium`, or `--effort low` for quick mechanical edits) for boilerplate routes + unit tests (`T3 + T4`).
 4. After each `exit 0`, inspects `git diff`, runs `npm test` / `npm run build`, marks `[x]` in `PLAN.md`, and creates a clean `git commit` checkpoint.
 
-> **Tip:** The first time your Planner executes `batonflow --tier ...` in the terminal, click **Always Allow** so subsequent dispatches run unattended.
+> **Tip (Permissions):**
+> 1. The first time your Planner executes `batonflow --tier ...` in the terminal, click **Always Allow** so subsequent dispatches run unattended.
+> 2. Executor CLIs run headlessly (`stdin` closed) with safe workspace-write defaults (`codex --sandbox workspace-write`, `claude --permission-mode acceptEdits`, `agy --mode=auto`), so they edit project files without stalling on interactive `[y/N]` prompts while keeping destructive system commands blocked.
 
 ---
 

@@ -113,7 +113,9 @@ Planner 会自动执行以下闭环：
    - 低风险强关联路由与单测（`T3 + T4`）：打包派发 `--tier low`（默认强度 `medium`，简单机械修改可加 `--effort low`）。
 4. 每次 `batonflow` 返回 `0` 后，自动检查 `git diff`、运行测试/构建、将 `PLAN.md` 对应项标记为 `[x]` 并执行 `git commit` 存档。
 
-> **小贴士**：第一次在终端调用 `batonflow --tier ...` 时，弹窗点击 **Always Allow**，后续即可全程无人值守闭环执行。
+> **小贴士（关于权限确认）**：
+> 1. 第一次在终端调用 `batonflow --tier ...` 时，弹窗点击 **Always Allow**，后续 Planner 即可全程无人值守派发。
+> 2. 子进程 Executor 默认以非交互模式 + **工作区受限自动写入**运行（`codex --sandbox workspace-write`、`claude --permission-mode acceptEdits`、`agy --mode=auto`），改项目文件不会卡在 `y/n` 确认，同时仍拦截高危系统操作。
 
 ---
 

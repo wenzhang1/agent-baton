@@ -30,6 +30,8 @@
     "codex": [
       "codex",
       "exec",
+      "--sandbox",
+      "workspace-write",
       "-m",
       "{{model}}",
       "-c",
@@ -39,6 +41,8 @@
     "claude": [
       "claude",
       "-p",
+      "--permission-mode",
+      "acceptEdits",
       "--model",
       "{{model}}",
       "--effort",
@@ -47,6 +51,7 @@
     ],
     "gemini": [
       "agy",
+      "--mode=auto",
       "-p",
       "{{task}}",
       "--model",

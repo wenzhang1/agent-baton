@@ -142,13 +142,15 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
     }
   },
   "commands": {
-    "codex": ["codex", "exec", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
-    "claude": ["claude", "-p", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
-    "gemini": ["agy", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
+    "codex": ["codex", "exec", "--sandbox", "workspace-write", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
+    "claude": ["claude", "-p", "--permission-mode", "acceptEdits", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
+    "gemini": ["agy", "--mode=auto", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
   }
 }
 ```
 
+> **非交互模式权限说明**：由于 `batonflow` 以无头非交互方式调用 Executor（关闭 `stdin`），默认模板已配置**仅限当前工作区的安全自动写入权限**（`--sandbox workspace-write`、`--permission-mode acceptEdits`、`--mode=auto`），无需人工按 `y/n` 即可修改项目代码，同时隔离高危系统操作（跑测试与 `git commit` 统一由 Planner 验收闭环执行）。如需让 Claude Code 作为 Executor 时也能执行测试命令，可按需追加 `--allowedTools "Read,Edit,Bash(npm test:*)"` 或配置 `.claude/settings.json`。
+>
 > **思维/推理强度控制（`--effort`）**：原生支持 `low` / `medium` / `high` / `xhigh` / `max` 5 档。不传 `--effort` 时自动采用 `default_effort[tier]`（默认 `high` 档用 `high`，`low` 档用 `medium`）；`effort_map` 可在接力时自动把目标 CLI 不支持的档位做平滑降级（例如把 `max` 自动映射为 `agy`/Gemini 4 支持的 `xhigh`，防止接力报错）。
 >
 > **命令模板双格式安全兼容**：推荐使用**参数数组格式**（`shell: false` 直接传递参数，任务中包含多行代码块、引号、反引号、`$VAR` 也不会产生转义错误）；同时也兼容单行**字符串模板**（如 `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`），内部会自动安全分词或 POSIX 转义。

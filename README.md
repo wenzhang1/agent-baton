@@ -140,13 +140,15 @@ See [`batonflow.config.example.json`](batonflow.config.example.json) for the ful
     }
   },
   "commands": {
-    "codex": ["codex", "exec", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
-    "claude": ["claude", "-p", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
-    "gemini": ["agy", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
+    "codex": ["codex", "exec", "--sandbox", "workspace-write", "-m", "{{model}}", "-c", "model_reasoning_effort={{effort}}", "{{task}}"],
+    "claude": ["claude", "-p", "--permission-mode", "acceptEdits", "--model", "{{model}}", "--effort", "{{effort}}", "{{task}}"],
+    "gemini": ["agy", "--mode=auto", "-p", "{{task}}", "--model", "{{model}}", "--effort", "{{effort}}"]
   }
 }
 ```
 
+> **Non-Interactive Executor Permissions:** Because `batonflow` runs Executor CLIs headlessly (`stdin` closed), the defaults enable **scoped workspace-write autonomy** (`--sandbox workspace-write`, `--permission-mode acceptEdits`, `--mode=auto`) so Executors can edit project files without blocking on `[y/N]` prompts—while still guarding against destructive system commands (tests & `git commit` are verified by the Planner). If you want Claude Code as Executor to also run specific test commands, add `--allowedTools "Read,Edit,Bash(npm test:*)"` or configure `.claude/settings.json`.
+>
 > **Reasoning / Thinking Effort (`--effort`):** Supports `low`, `medium`, `high`, `xhigh`, and `max`. When omitted, `batonflow` uses `default_effort[tier]` (`high` → `high`, `low` → `medium`). Use `effort_map` to safely downgrade unsupported levels during failover (e.g., mapping `max` → `xhigh` for `agy` / Gemini 4).
 >
 > **Safe Command Templates:** `commands` supports both **argv arrays** (recommended—executed with `shell: false`, 100% immune to quote/backtick/newline/`$VAR` corruption) and **string templates** (e.g., `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`, safely tokenized or POSIX-quoted automatically).
