@@ -169,7 +169,8 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 > ```
 >
 > **双保险超时控制（`idle_timeout_seconds` + `timeout_seconds`）**：
-> - **`idle_timeout_seconds`** *（默认 `600` 秒 = 10 分钟，设为 `0` 可关闭）*：**无输出空闲超时**。只要 Executor 的 `stdout`/`stderr` 有任何新输出就自动续期，正常长时间编码/推理任务不会被误杀；彻底卡死无输出超限时才会强杀进程组（`exit 1`，`reason=idle_timeout`）。
+> 两个定时器并行生效、谁先触发以谁为准：
+> - **`idle_timeout_seconds`** *（默认 `600` 秒 = 10 分钟，设为 `0` 可关闭）*：**无输出空闲超时**。只要 Executor 的 `stdout`/`stderr` 有任何新输出就自动续期，正常长时间编码/推理任务不会被误杀；彻底卡死无输出超限时才会强杀进程组（`exit 1`，`reason=idle_timeout`）。*提示：如果项目存在超过 10 分钟全程零输出的静默构建/全量测试，可调大该值或设为 `"idle_timeout_seconds": 0` 关闭空闲检测。*
 > - **`timeout_seconds`** *（默认 `1800` 秒 = 30 分钟）*：**单次任务总时长硬上限**，防止死循环不断打印日志导致空闲计时器无限续期（`exit 1`，`reason=timeout`）。
 >
 > **思维/推理强度控制（`--effort`）**：原生支持 `low` / `medium` / `high` / `xhigh` / `max` 5 档。不传 `--effort` 时自动采用 `default_effort[tier]`（默认 `high` 档用 `high`，`low` 档用 `medium`）；`effort_map` 可在接力时自动把目标 CLI 不支持的档位做平滑降级（例如把 `max` 自动映射为 `agy`/Gemini 4 支持的 `xhigh`，防止接力报错）。

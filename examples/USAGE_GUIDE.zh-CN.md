@@ -73,9 +73,13 @@ batonflow --version
   "exhaustion_policy": {
     "short_limit": "manual_pause",
     "weekly_limit": "planner_takeover"
-  }
+  },
+  "timeout_seconds": 1800,
+  "idle_timeout_seconds": 600
 }
 ```
+
+> **超时配置提示**：`idle_timeout_seconds`（默认 `600s`）只要子进程有新输出就会自动续期，`timeout_seconds`（默认 `1800s`）作为单次任务总时长兜底。如果项目有超过 10 分钟全程零输出的静默构建或全量测试，可调大 `idle_timeout_seconds` 或设为 `0` 关闭空闲检测。
 
 运行零额度消耗演练，确认模型与思维强度路由正确（可以看到 `--effort max` 传给 `agy`/Gemini 4 时会自动安全映射为 `xhigh`）：
 ```bash

@@ -167,7 +167,8 @@ See [`batonflow.config.example.json`](batonflow.config.example.json) for the ful
 > ```
 >
 > **Dual Timeout Protection (`idle_timeout_seconds` + `timeout_seconds`):**
-> - **`idle_timeout_seconds`** *(default `600` = 10 min; set `0` to disable)*: Resets automatically whenever the Executor emits any `stdout`/`stderr` output, so active long-running coding tasks keep running while genuinely frozen processes are terminated cleanly (`exit 1`, `reason=idle_timeout`).
+> Both timers run in parallel (whichever expires first terminates the process group cleanly):
+> - **`idle_timeout_seconds`** *(default `600` = 10 min; set `0` to disable)*: Resets automatically whenever the Executor emits any `stdout`/`stderr` output, so active long-running coding tasks keep running while genuinely frozen processes are terminated cleanly (`exit 1`, `reason=idle_timeout`). *Tip: If your project runs silent builds or full test suites that emit zero output for >10 minutes, increase this value or set `"idle_timeout_seconds": 0`.*
 > - **`timeout_seconds`** *(default `1800` = 30 min)*: Hard wall-clock safety cap per dispatch, preventing runaway infinite-log loops (`exit 1`, `reason=timeout`).
 >
 > **Reasoning / Thinking Effort (`--effort`):** Supports `low`, `medium`, `high`, `xhigh`, and `max`. When omitted, `batonflow` uses `default_effort[tier]` (`high` → `high`, `low` → `medium`). Use `effort_map` to safely downgrade unsupported levels during failover (e.g., mapping `max` → `xhigh` for `agy` / Gemini 4).
