@@ -202,6 +202,7 @@ Both `short_limit` (5-hour rolling window / 429 / RPM) and `weekly_limit` (weekl
 | `init [dir] [--adapter ...] [--permission-mode safe\|yolo] [--force]` | Initialize config, templates, universal Agent Skill (`.agents/skills/` & `.claude/skills/`), and adapters into `dir` (default: cwd) |
 | `init --global-skill [target] [--force]` | Install the universal Skill globally (`all` / `antigravity` / `claude-code` / `codex`) without creating project files |
 | `mode <safe\|yolo> [--config <path>]` | Switch `codex`/`claude`/`gemini` commands in `batonflow.config.json` between `safe` (workspace-write) and `yolo` (container full-bypass) |
+| `archive [name] [--force] [--plan <path>]` | Archive completed `PLAN.md` to `.batonflow/archive/YYYY-MM-DD-<name>.md` and reset `PLAN.md` for the next milestone (preserving Tech Stack, Verification Commands & Hard Constraints) |
 | `--tier <high\|low>` | Capability tier to route (required for task dispatch) |
 | `--effort <level>` | Reasoning/thinking effort: `low \| medium \| high \| xhigh \| max` (optional; defaults to `default_effort[tier]`) |
 | `--task "<text>"` | Inline task prompt |

@@ -176,9 +176,53 @@ batonflow --mock failover --tier high --effort xhigh --task "实现 JWT 刷新�
 
 ---
 
-## 6. 日常高频命令速查
+## 6. 计划生命周期：归档旧计划与废弃重来
+
+`PLAN.md` 遵循**单活跃里程碑原则**——始终只保留当前正在进行的这一个计划（保持在 60~120 行），避免历史任务堆积导致 Token 膨胀或编号冲突。
+
+### A. 完成旧计划后开启新计划
+当 `PLAN.md` 中所有任务都标记为 `[x]` 后，开启新需求时 Planner 会自动运行 `batonflow archive <简短名称>`（你也可以随时手动运行）：
 
 ```bash
+batonflow archive jwt-auth
+```
+
+效果：
+- 将旧计划归档至 `.batonflow/archive/YYYY-MM-DD-jwt-auth.md`（留底备查，Planner 平时不会读取，**零 Token 消耗**）。
+- 自动重置 `PLAN.md`，同时**保留你已填写的 Tech Stack、Verification Commands 与 Hard Constraints**。
+
+### B. 觉得当前计划不好，想中途抛弃并重新开始
+
+1. **还没开始写代码，或想保留已提交的前几步代码（只重置计划）**：
+   - 直接对 Planner 说：
+     > 「放弃当前计划，先用 `batonflow archive abandoned --force` 归档重置 `PLAN.md`，再用 batonflow 重新规划 XXX。」
+   - 或在终端手动执行：
+     ```bash
+     git checkout -- .                    # 丢弃未提交的半成品修改（如有）
+     batonflow archive abandoned --force  # 强制归档未完成的旧 PLAN.md 并干净重置
+     ```
+
+2. **旧计划已经跑了几步，想把写出的代码也一并彻底回滚**：
+   由于每个验收通过的任务都是独立 `git commit`，回滚非常干净：
+   ```bash
+   git log -n 10 --oneline              # 找到旧计划开始前的干净 commit（例如 abc1234）
+   batonflow archive abandoned --force  # 可选：先把旧计划归档留底
+   git reset --hard abc1234             # 若已推远程，建议改用：git checkout -b feat/new-plan abc1234
+   ```
+
+> **最佳实践**：做大需求前先切一条独立功能分支（`git checkout -b feat/try-a`）；万一中途决定推倒重来，直接切回 `main` 新开分支（`git checkout -b feat/try-b`），零风险无需回滚。
+
+---
+
+## 7. 日常高频命令速查
+
+```bash
+# 完成一个里程碑后归档旧 PLAN.md 并智能重置（自动保留技术栈和测试命令，防止 Token 膨胀）
+batonflow archive jwt-auth
+
+# 若计划未完成但需强行切换新需求，可加 --force 强制归档
+batonflow archive old-prototype --force
+
 # 查看各 Executor 冷却剩余时间与当前耗尽策略
 batonflow --status
 

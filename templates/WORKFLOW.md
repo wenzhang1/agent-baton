@@ -15,7 +15,20 @@ This document is a **client-agnostic operational specification** for any AI agen
 
 ---
 
-## 2. Dynamic Task Batching Rules
+## 2. Single Active Milestone & `PLAN.md` Lifecycle (Prevent Token Bloat)
+
+Keep `PLAN.md` strictly scoped to **one active milestone at a time** so it stays compact (~60–120 lines) and never burns extra tokens on old completed work:
+
+- **Starting a new milestone when previous tasks are all `[x]`**:
+  1. Run `batonflow archive <short-slug>` (e.g., `batonflow archive jwt-auth`). This archives the finished plan to `.batonflow/archive/YYYY-MM-DD-<short-slug>.md` and resets `PLAN.md` while automatically preserving your **Tech Stack**, **Verification Commands**, and **Hard Constraints**.
+  2. Write the new milestone's Objective and Task Board into the fresh `PLAN.md` (never keep appending new milestones onto an old completed `PLAN.md`).
+- **Starting an unrelated milestone while `[ ]` / `[!]` tasks remain**:
+  - Ask the user whether to resume/finish the current plan first or archive it forcibly with `batonflow archive <short-slug> --force`.
+- **Never** read `.batonflow/archive/` unless the user explicitly asks to inspect historical milestones.
+
+---
+
+## 3. Dynamic Task Batching Rules
 
 Before dispatching from `PLAN.md`, group pending `[ ]` tasks dynamically by risk and coupling:
 
@@ -28,7 +41,7 @@ Before dispatching from `PLAN.md`, group pending `[ ]` tasks dynamically by risk
 
 ---
 
-## 3. Capability Tier & Reasoning Effort Decision Rules
+## 4. Capability Tier & Reasoning Effort Decision Rules
 
 Choose the lowest tier and reasoning effort (`--effort low|medium|high|xhigh|max`) that can reliably succeed on the first try:
 
@@ -45,7 +58,7 @@ Choose the lowest tier and reasoning effort (`--effort low|medium|high|xhigh|max
 
 ---
 
-## 4. Dispatch & Verification Loop
+## 5. Dispatch & Verification Loop
 
 For each task (or batch) in `PLAN.md`:
 
@@ -64,8 +77,8 @@ batonflow --tier <high|low> --task-file .batonflow/current-task.md
 | :---: | :--- | :--- |
 | **`0`** | Executor succeeded | Proceed to **Step C (Verification & Commit)** |
 | **`1`** | Normal failure, build/code error, or timeout | Inspect the log path printed by `batonflow`. Refine instructions or pass error details back and retry (**max 2 retries** per task). |
-| **`2`** | All executors unavailable/exhausted (at least one **short-term / 5-hour** limit) | Follow **Section 5 (Checkpoint & Exhaustion Policy)** based on `next_action=...` |
-| **`3`** | All usable executors exhausted by **weekly / hard quota** limits | Follow **Section 5 (Checkpoint & Exhaustion Policy)** based on `next_action=...` |
+| **`2`** | All executors unavailable/exhausted (at least one **short-term / 5-hour** limit) | Follow **Section 6 (Checkpoint & Exhaustion Policy)** based on `next_action=...` |
+| **`3`** | All usable executors exhausted by **weekly / hard quota** limits | Follow **Section 6 (Checkpoint & Exhaustion Policy)** based on `next_action=...` |
 
 ### Step C — Verification & Commit Checkpoint (Mandatory on Exit `0`)
 Never trust an Executor's self-report blindly. Always verify:
@@ -88,7 +101,7 @@ Never trust an Executor's self-report blindly. Always verify:
 
 ---
 
-## 5. Checkpoint Recovery & 3-Mode Exhaustion Policy
+## 6. Checkpoint Recovery & 3-Mode Exhaustion Policy
 
 When `batonflow` exits with **`2`** (short-term / 5-hour limit) or **`3`** (weekly / hard quota limit), read the final structured directive printed to `stderr`:
 
@@ -124,7 +137,7 @@ Before pausing or switching modes, ensure the working tree is clean of half-fini
 
 ---
 
-## 6. Cross-Client Resume Protocol
+## 7. Cross-Client Resume Protocol
 
 When resuming work in a **new session or a completely different AI client**:
 1. Read `PLAN.md` (focus on **Global Constraints**, tasks marked `[!]` or `[ ]`, and **Latest Handoff Context**).
