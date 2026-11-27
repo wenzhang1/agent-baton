@@ -174,7 +174,45 @@ Because every completed task is an atomic `git commit` and `PLAN.md` holds the e
 
 ---
 
-## 6. Useful Day-to-Day Commands
+## 6. Plan Lifecycle — Archiving & Abandoning an Old Plan
+
+`PLAN.md` is designed to track **one active milestone at a time** so it stays compact (~60–120 lines) and never wastes input tokens on old completed work.
+
+### A. Starting a New Milestone After Finishing the Previous One
+Once all tasks in `PLAN.md` are `[x]`, your Planner will automatically run `batonflow archive <short-name>` before writing the next plan (or you can run it yourself):
+
+```bash
+batonflow archive jwt-auth
+```
+
+This:
+- Moves the completed plan to `.batonflow/archive/YYYY-MM-DD-jwt-auth.md` (preserved for humans, never loaded by the Planner).
+- Resets `PLAN.md` to a clean template while **automatically keeping** your `Tech Stack`, `Verification Commands`, and `Hard Constraints`.
+
+### B. Abandoning a Bad Plan & Starting Over
+
+1. **Before coding starts (or if you want to keep already-committed steps and only replace remaining tasks)**:
+   - Tell your Planner directly:
+     > "Abandon the current plan, run `batonflow archive abandoned --force` to reset `PLAN.md`, and plan `<new approach>` with batonflow."
+   - Or run manually:
+     ```bash
+     git checkout -- .                    # discard any uncommitted dirty edits
+     batonflow archive abandoned --force  # force-archive unfinished PLAN.md and reset cleanly
+     ```
+
+2. **If you also want to roll back code commits from the abandoned plan**:
+   Because every verified task is an atomic `git commit`:
+   ```bash
+   git log -n 10 --oneline              # find the clean commit before the old plan (e.g. abc1234)
+   batonflow archive abandoned --force  # optional: keep a copy of the old plan in .batonflow/archive/
+   git reset --hard abc1234             # or if already pushed: git checkout -b feat/new-plan abc1234
+   ```
+
+> **Pro Tip:** Start each major milestone on its own feature branch (`git checkout -b feat/try-a`). If you decide to scrap the entire direction, simply switch back to `main` and cut a fresh branch (`git checkout -b feat/try-b`)—zero rollback risk.
+
+---
+
+## 7. Useful Day-to-Day Commands
 
 ```bash
 # Archive completed PLAN.md before starting a new milestone (keeps PLAN.md compact & low-token)
