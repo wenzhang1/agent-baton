@@ -217,6 +217,13 @@ batonflow archive jwt-auth
 ## 7. 日常高频命令速查
 
 ```bash
+# 升级全局 CLI（npm install -g batonflow@latest）后，一键安全刷新当前项目的框架规则与 Skill
+# （100% 保留你的 batonflow.config.json、PLAN.md 和 .claude/settings.json）
+batonflow upgrade
+
+# 同步刷新所有客户端的全局 Skill
+batonflow upgrade --global-skill
+
 # 完成一个里程碑后归档旧 PLAN.md 并智能重置（自动保留技术栈和测试命令，防止 Token 膨胀）
 batonflow archive jwt-auth
 

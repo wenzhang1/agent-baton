@@ -215,6 +215,13 @@ This:
 ## 7. Useful Day-to-Day Commands
 
 ```bash
+# Safely upgrade framework workflow/Skill/rules after `npm install -g batonflow@latest`
+# (preserves batonflow.config.json, PLAN.md, and .claude/settings.json untouched)
+batonflow upgrade
+
+# Or refresh installed global Skills across all clients
+batonflow upgrade --global-skill
+
 # Archive completed PLAN.md before starting a new milestone (keeps PLAN.md compact & low-token)
 batonflow archive jwt-auth
 

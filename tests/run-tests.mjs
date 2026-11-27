@@ -637,6 +637,73 @@ Status legend: \`[ ]\` Pending · \`[x]\` Verified & Committed · \`[!]\` Interr
   assert.match(resetContent, /Never alter historical SQL migrations/);
 });
 
+test('25. `batonflow upgrade` refreshes framework files while preserving user config, PLAN.md, and settings', () => {
+  const dir = path.join(tmpBase, 'upgrade-project');
+  fs.mkdirSync(dir, { recursive: true });
+  assert.equal(runBatonflow(['init'], { cwd: dir }).status, 0);
+
+  // Customize user-owned files AND simulate outdated framework files (including missing Skill from older version)
+  const cfgPath = path.join(dir, 'batonflow.config.json');
+  const planPath = path.join(dir, 'PLAN.md');
+  const settingsPath = path.join(dir, '.claude', 'settings.json');
+  const claudeMdPath = path.join(dir, 'CLAUDE.md');
+  const workflowPath = path.join(dir, '.batonflow', 'WORKFLOW.md');
+  const agySkillPath = path.join(dir, '.agents', 'skills', 'batonflow', 'SKILL.md');
+  const agyRulePath = path.join(dir, '.agent', 'rules', 'batonflow.md');
+  const claudeSkillPath = path.join(dir, '.claude', 'skills', 'batonflow', 'SKILL.md');
+
+  fs.writeFileSync(cfgPath, '{"executor_chain":["codex"],"custom_keep":true}\n', 'utf8');
+  fs.writeFileSync(planPath, '# My Active Plan\nKeep this untouched!\n', 'utf8');
+  fs.writeFileSync(settingsPath, '{"permissions":{"allow":["Bash(custom:*)"]}}\n', 'utf8');
+  fs.writeFileSync(
+    claudeMdPath,
+    '# Repo Custom Rules\n\n<!-- batonflow:start -->\nOLD SNIPPET\n<!-- batonflow:end -->\n',
+    'utf8'
+  );
+  fs.writeFileSync(workflowPath, 'OLD WORKFLOW', 'utf8');
+  fs.writeFileSync(agyRulePath, 'OLD RULE', 'utf8');
+  // Simulate pre-0.2.0 project that did not yet have SKILL.md files
+  fs.unlinkSync(agySkillPath);
+  fs.unlinkSync(claudeSkillPath);
+
+  const res = runBatonflow(['upgrade'], { cwd: dir });
+  assert.equal(res.status, 0, res.stderr);
+
+  // User-owned files MUST be 100% untouched
+  assert.equal(fs.readFileSync(cfgPath, 'utf8'), '{"executor_chain":["codex"],"custom_keep":true}\n');
+  assert.equal(fs.readFileSync(planPath, 'utf8'), '# My Active Plan\nKeep this untouched!\n');
+  assert.equal(
+    fs.readFileSync(settingsPath, 'utf8'),
+    '{"permissions":{"allow":["Bash(custom:*)"]}}\n'
+  );
+
+  // Framework-managed files MUST be refreshed/installed to latest
+  assert.match(fs.readFileSync(workflowPath, 'utf8'), /Single Active Milestone/);
+  assert.match(fs.readFileSync(agyRulePath, 'utf8'), /batonflow archive/);
+  assert.ok(fs.existsSync(agySkillPath));
+  assert.ok(fs.existsSync(claudeSkillPath));
+  assert.match(fs.readFileSync(agySkillPath, 'utf8'), /^---\nname: batonflow\n/);
+
+  // CLAUDE.md keeps repo rules AND updates marker block
+  const claudeMd = fs.readFileSync(claudeMdPath, 'utf8');
+  assert.match(claudeMd, /# Repo Custom Rules/);
+  assert.doesNotMatch(claudeMd, /OLD SNIPPET/);
+  assert.match(claudeMd, /batonflow archive/);
+
+  // Verify `batonflow upgrade --global-skill` refreshes global skill files
+  const fakeHome = path.join(tmpBase, 'upgrade-global-home');
+  const globalAgySkill = path.join(fakeHome, '.gemini', 'config', 'skills', 'batonflow', 'SKILL.md');
+  fs.mkdirSync(path.dirname(globalAgySkill), { recursive: true });
+  fs.writeFileSync(globalAgySkill, 'OLD GLOBAL SKILL', 'utf8');
+
+  const gRes = runBatonflow(['upgrade', '--global-skill'], {
+    cwd: dir,
+    env: { BATONFLOW_HOME: fakeHome },
+  });
+  assert.equal(gRes.status, 0, gRes.stderr);
+  assert.match(fs.readFileSync(globalAgySkill, 'utf8'), /^---\nname: batonflow\n/);
+});
+
 // Run all tests
 let passed = 0;
 let failed = 0;
