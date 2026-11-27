@@ -177,6 +177,12 @@ Because every completed task is an atomic `git commit` and `PLAN.md` holds the e
 ## 6. Useful Day-to-Day Commands
 
 ```bash
+# Archive completed PLAN.md before starting a new milestone (keeps PLAN.md compact & low-token)
+batonflow archive jwt-auth
+
+# Force-archive an unfinished plan if switching priorities
+batonflow archive old-prototype --force
+
 # Inspect active executor cooldowns and exhaustion policies
 batonflow --status
 

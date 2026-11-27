@@ -549,6 +549,94 @@ test('22. `batonflow init --permission-mode yolo` and `batonflow mode safe|yolo`
   assert.ok(cfg.commands.gemini.includes('--dangerously-skip-permissions'));
 });
 
+test('23. `batonflow archive` refuses unfinished PLAN.md unless --force, and avoids archive overwrites', () => {
+  const dir = path.join(tmpBase, 'archive-guard');
+  fs.mkdirSync(dir, { recursive: true });
+  assert.equal(runBatonflow(['init'], { cwd: dir }).status, 0);
+
+  // Default template PLAN.md has pending [ ] tasks -> must refuse without --force
+  const blocked = runBatonflow(['archive', 'wip-feature'], { cwd: dir });
+  assert.equal(blocked.status, 1);
+  assert.match(blocked.stderr, /Refusing to archive/);
+
+  // With --force -> archives cleanly
+  const forced1 = runBatonflow(['archive', 'wip-feature', '--force'], { cwd: dir });
+  assert.equal(forced1.status, 0, forced1.stderr);
+  const archiveDir = path.join(dir, '.batonflow', 'archive');
+  const files1 = fs.readdirSync(archiveDir);
+  assert.equal(files1.length, 1);
+  assert.match(files1[0], /^\d{4}-\d{2}-\d{2}-wip-feature\.md$/);
+
+  // Second archive with same slug creates -2.md without overwriting the first
+  const forced2 = runBatonflow(['archive', 'wip-feature', '--force'], { cwd: dir });
+  assert.equal(forced2.status, 0, forced2.stderr);
+  const files2 = fs.readdirSync(archiveDir).sort();
+  assert.equal(files2.length, 2);
+  assert.ok(files2.some((f) => /-wip-feature-2\.md$/.test(f)));
+});
+
+test('24. `batonflow archive` succeeds on completed PLAN.md and preserves Section 1 project constraints', () => {
+  const dir = path.join(tmpBase, 'archive-smart-reset');
+  fs.mkdirSync(dir, { recursive: true });
+  assert.equal(runBatonflow(['init'], { cwd: dir }).status, 0);
+
+  const planPath = path.join(dir, 'PLAN.md');
+  const completedPlan = `# batonflow Task Plan (\`PLAN.md\`)
+
+---
+
+## 1. Global Goal & Constraints
+
+- **Objective**: Implement JWT login and refresh token rotation
+- **Tech Stack**: TypeScript, Node 22, PostgreSQL, Vitest
+- **Repo Conventions**: Follow existing \`AGENTS.md\` / \`CLAUDE.md\`.
+- **Verification Commands**:
+  - Test: \`pnpm test\`
+  - Build / Typecheck: \`pnpm typecheck\`
+  - Lint: \`pnpm lint\`
+- **Hard Constraints / Do Not Touch**:
+  - Never alter historical SQL migrations
+
+---
+
+## 2. Task Board
+
+Status legend: \`[ ]\` Pending · \`[x]\` Verified & Committed · \`[!]\` Interrupted / Blocked
+
+| ID | Status | Tier | Batch | Depends On | Task Description | Acceptance Criteria |
+| :--- | :---: | :---: | :---: | :---: | :--- | :--- |
+| \`T1\` | \`[x]\` | \`high\` | single | \`-\` | Build JWT service | Tests pass |
+| \`T2\` | \`[x]\` | \`low\` | single | \`T1\` | Add unit tests | Tests pass |
+
+---
+
+## 3. Relay & Checkpoint Recovery Log
+
+- **State**: \`COMPLETED\`
+`;
+  fs.writeFileSync(planPath, completedPlan, 'utf8');
+
+  const res = runBatonflow(['archive', 'jwt-auth'], { cwd: dir });
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stdout, /preserved Tech Stack, Verification Commands, and Hard Constraints/);
+
+  // Archived copy contains original completed plan
+  const archiveDir = path.join(dir, '.batonflow', 'archive');
+  const archivedFiles = fs.readdirSync(archiveDir);
+  assert.equal(archivedFiles.length, 1);
+  const archivedContent = fs.readFileSync(path.join(archiveDir, archivedFiles[0]), 'utf8');
+  assert.match(archivedContent, /Implement JWT login and refresh token rotation/);
+  assert.match(archivedContent, /Build JWT service/);
+
+  // Reset PLAN.md cleared old Objective & old tasks, but kept Tech Stack, Verification Commands & Hard Constraints!
+  const resetContent = fs.readFileSync(planPath, 'utf8');
+  assert.doesNotMatch(resetContent, /Implement JWT login and refresh token rotation/);
+  assert.doesNotMatch(resetContent, /Build JWT service/);
+  assert.match(resetContent, /TypeScript, Node 22, PostgreSQL, Vitest/);
+  assert.match(resetContent, /pnpm test/);
+  assert.match(resetContent, /Never alter historical SQL migrations/);
+});
+
 // Run all tests
 let passed = 0;
 let failed = 0;

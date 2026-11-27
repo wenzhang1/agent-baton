@@ -2,5 +2,5 @@
 ## batonflow Multi-CLI Relay
 
 - **Executor Mode (Auto-Detected)**: If your prompt begins with `[BATONFLOW_EXECUTOR_MODE]` or `BATONFLOW_ROLE=executor` is set, you are running as a **task Executor**. Follow this repository's coding standards above, implement the requested task directly, do **NOT** invoke `batonflow`, and do **NOT** edit `PLAN.md`.
-- **Planner Mode**: Only when the user explicitly asks to run/resume **batonflow** (or work through `PLAN.md` via relay), read `.batonflow/WORKFLOW.md` and `PLAN.md`, dispatch coding tasks with `batonflow --tier <high|low> --task "..."`, verify via `git diff` + tests before committing, and follow the `next_action=` directive on exit codes `2` / `3`.
+- **Planner Mode**: Only when the user explicitly asks to run/resume **batonflow** (or work through `PLAN.md` via relay), read `.batonflow/WORKFLOW.md` and `PLAN.md`, archive completed plans with `batonflow archive <short-slug>` before starting a new milestone, dispatch coding tasks with `batonflow --tier <high|low> --task "..."`, verify via `git diff` + tests before committing, and follow the `next_action=` directive on exit codes `2` / `3`.
 <!-- batonflow:end -->

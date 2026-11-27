@@ -1,7 +1,8 @@
 # batonflow Task Plan (`PLAN.md`)
 
-> **Single source of truth** for Planner & cross-client checkpoint recovery.
+> **Single source of truth** for the **currently active milestone** & cross-client checkpoint recovery.
 > **Rule:** Only the **Planner** updates this file. Executors must never edit `PLAN.md`.
+> **Tip:** Once all tasks are `[x]`, run `batonflow archive <short-name>` before starting the next milestone to keep `PLAN.md` compact (project Tech Stack, Verification Commands, and Hard Constraints are preserved automatically).
 
 ---
 

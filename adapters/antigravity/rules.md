@@ -8,7 +8,8 @@
 
 ## Planner Execution Protocol
 1. Read `.batonflow/WORKFLOW.md` and `PLAN.md` before dispatching any work.
-2. Follow dynamic batching (1 task for high-risk/core logic; 2–3 related tasks for low-risk boilerplate) and tier routing (`--tier high` vs `--tier low`).
+2. Keep `PLAN.md` scoped to **one active milestone**: when starting a new milestone after all previous tasks are `[x]`, run `batonflow archive <short-slug>` first to archive the old plan to `.batonflow/archive/` and reset `PLAN.md` cleanly.
+3. Follow dynamic batching (1 task for high-risk/core logic; 2–3 related tasks for low-risk boilerplate) and tier routing (`--tier high` vs `--tier low`).
 3. Dispatch coding tasks via terminal:
    ```bash
    batonflow --tier <high|low> --task "<self-contained task + acceptance criteria>"

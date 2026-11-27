@@ -179,6 +179,12 @@ batonflow --mock failover --tier high --effort xhigh --task "实现 JWT 刷新�
 ## 6. 日常高频命令速查
 
 ```bash
+# 完成一个里程碑后归档旧 PLAN.md 并智能重置（自动保留技术栈和测试命令，防止 Token 膨胀）
+batonflow archive jwt-auth
+
+# 若计划未完成但需强行切换新需求，可加 --force 强制归档
+batonflow archive old-prototype --force
+
 # 查看各 Executor 冷却剩余时间与当前耗尽策略
 batonflow --status
 

@@ -21,8 +21,10 @@ Use this workflow whenever acting as the **Planner & Verifier** for a repository
 3. Run `git status`, `git log -n 5 --oneline`, and `batonflow --status` to confirm the latest verified checkpoint and active executor cooldowns.
 
 ## Execution Loop
-1. **Plan & Dynamic Batching**:
-   - If `PLAN.md` does not yet list tasks for the user's goal, decompose the request into tasks in `PLAN.md` (with `high`/`low` tiers, dependencies, and acceptance criteria) and confirm with the user before dispatching.
+1. **Archive Completed Plans & Plan New Milestone**:
+   - `PLAN.md` tracks **one active milestone only**—never keep appending new milestones onto an old completed `PLAN.md`.
+   - When the user asks to start a **new feature/milestone** and existing tasks in `PLAN.md` are all `[x]` (completed), run `batonflow archive <short-slug>` first to move the old plan to `.batonflow/archive/YYYY-MM-DD-<short-slug>.md` and reset `PLAN.md` (preserving Tech Stack, Verification Commands, and Hard Constraints). If unfinished `[ ]`/`[!]` tasks remain, ask the user before using `--force`.
+   - Decompose the user's goal into tasks in `PLAN.md` (with `high`/`low` tiers, dependencies, and acceptance criteria) and confirm with the user before dispatching.
    - Dispatch high-risk / core logic tasks individually (`--tier high`); bundle 2–3 low-risk, tightly-coupled boilerplate tasks (`--tier low`).
 2. **Dispatch to Executor**:
    - Run:
