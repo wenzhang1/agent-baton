@@ -139,6 +139,29 @@ switch (mode) {
     }, 10000);
     break;
 
+  case 'heartbeat': {
+    // Emits periodic progress output for ~2.1s (> 1s idle timeout) then succeeds
+    let step = 0;
+    const interval = setInterval(() => {
+      step += 1;
+      console.log(`[${args.executor}] working step ${step}/6...`);
+      if (step >= 6) {
+        clearInterval(interval);
+        console.log(
+          JSON.stringify({
+            mock: true,
+            status: 'ok_heartbeat',
+            executor: args.executor,
+            model: args.model,
+            steps: step,
+          })
+        );
+        process.exit(0);
+      }
+    }, 350);
+    break;
+  }
+
   case 'try_nested': {
     const nested = spawnSync(
       process.execPath,

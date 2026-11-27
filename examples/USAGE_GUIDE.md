@@ -73,9 +73,13 @@ Keep only the AI CLIs you actually have installed and signed into in `executor_c
   "exhaustion_policy": {
     "short_limit": "manual_pause",
     "weekly_limit": "planner_takeover"
-  }
+  },
+  "timeout_seconds": 1800,
+  "idle_timeout_seconds": 600
 }
 ```
+
+> **Timeout tip:** `idle_timeout_seconds` (default `600s`) resets on every new line of output so active tasks keep running, while `timeout_seconds` (default `1800s`) caps total runtime. If your project runs silent builds/tests with zero output for >10 min, raise `idle_timeout_seconds` or set it to `0` to disable idle detection.
 
 Run a zero-API-cost dry run to verify model & effort resolution (notice how `--effort max` automatically maps to `xhigh` for `agy` / Gemini 4):
 ```bash
