@@ -2,22 +2,21 @@
 
 > **Single source of truth** for the **currently active milestone** & cross-client checkpoint recovery.
 > **Rule:** Only the **Planner** updates this file. Executors must never edit `PLAN.md`.
-> **Tip:** Once all tasks are `[x]`, run `batonflow archive <short-name>` before starting the next milestone to keep `PLAN.md` compact (project Tech Stack, Verification Commands, and Hard Constraints are preserved automatically).
+> **Tip:** Once all tasks are `[x]`, run `batonflow archive <short-name>` before starting the next milestone to keep `PLAN.md` compact (project Tech Stack and Verification Commands are preserved automatically).
 
 ---
 
 ## 1. Global Goal & Constraints
 
 - **Objective**: <!-- Describe the end-to-end feature or milestone goal in 1–3 sentences -->
-- **Tech Stack**: <!-- e.g. TypeScript, Node.js 20, PostgreSQL, Vitest -->
+- **Tech Stack**: <!-- e.g. TypeScript, Node.js 22, PostgreSQL, Vitest -->
 - **Repo Conventions**: Follow existing `AGENTS.md` / `CLAUDE.md` (if present).
 - **Verification Commands**:
   - Test: `npm test`
   - Build / Typecheck: `npm run build`
   - Lint: `npm run lint`
 - **Hard Constraints / Do Not Touch**:
-  - <!-- e.g. Do not modify production migration files already applied -->
-  - <!-- e.g. Keep public REST API backwards compatible -->
+  - <!-- Add milestone-specific constraints here -->
 
 ---
 
@@ -27,11 +26,7 @@ Status legend: `[ ]` Pending · `[x]` Verified & Committed · `[!]` Interrupted 
 
 | ID | Status | Tier | Batch | Depends On | Task Description | Acceptance Criteria |
 | :--- | :---: | :---: | :---: | :---: | :--- | :--- |
-| `T1` | `[ ]` | `high` | single | `-` | Design and implement core data model & interfaces | Types compile cleanly; unit tests pass |
-| `T2` | `[ ]` | `high` | single | `T1` | Implement core business logic & error handling | Edge-case tests pass; `git diff` clean |
-| `T3` | `[ ]` | `low` | B1 | `T2` | Add CLI/API wrapper endpoints & input validation | Endpoint integration tests pass |
-| `T4` | `[ ]` | `low` | B1 | `T2` | Add unit tests & fixtures for edge cases | Coverage & full test suite pass |
-| `T5` | `[ ]` | `low` | single | `T3, T4` | Update documentation & usage examples | Docs match implementation; build passes |
+<!-- Planner populates tasks for the active milestone here (e.g. T1, [ ], high, single, -, description, acceptance criteria) -->
 
 ---
 
@@ -40,8 +35,8 @@ Status legend: `[ ]` Pending · `[x]` Verified & Committed · `[!]` Interrupted 
 ### Latest Handoff Context
 *(Updated by Planner whenever work pauses `[!]` or switches to Planner self-takeover)*
 
-- **State**: `ACTIVE` <!-- ACTIVE | PAUSED_SHORT_LIMIT | PAUSED_WEEKLY_LIMIT | PLANNER_TAKEOVER | COMPLETED -->
-- **Last Verified Commit**: `<git commit hash & message>`
+- **State**: `IDLE` <!-- IDLE | ACTIVE | PAUSED_SHORT_LIMIT | PAUSED_WEEKLY_LIMIT | PLANNER_TAKEOVER | COMPLETED -->
+- **Last Verified Commit**: `<none>`
 - **Interrupted Task(s)**: `None`
 - **Last Executor / Model**: `None`
 - **Interruption Reason**: `None` <!-- e.g. exit=2 short_limit (5-hour window) / exit=3 weekly_limit -->
@@ -53,4 +48,4 @@ Status legend: `[ ]` Pending · `[x]` Verified & Committed · `[!]` Interrupted 
 
 | Timestamp (UTC) | Task | Tier | Executor / Model | Outcome | Commit / Notes |
 | :--- | :--- | :---: | :--- | :--- | :--- |
-| `YYYY-MM-DD HH:MM` | `T1` | `high` | `codex (gpt-6.2-astra / high)` | `example` | Replace with real entries as tasks complete |
+<!-- Planner appends verified task & failover events here -->

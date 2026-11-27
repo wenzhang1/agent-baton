@@ -554,12 +554,23 @@ test('23. `batonflow archive` refuses unfinished PLAN.md unless --force, and avo
   fs.mkdirSync(dir, { recursive: true });
   assert.equal(runBatonflow(['init'], { cwd: dir }).status, 0);
 
-  // Default template PLAN.md has pending [ ] tasks -> must refuse without --force
+  const planPath = path.join(dir, 'PLAN.md');
+  const wipPlan = `# batonflow Task Plan (\`PLAN.md\`)
+
+## 2. Task Board
+
+| ID | Status | Tier | Batch | Depends On | Task Description | Acceptance Criteria |
+| :--- | :---: | :---: | :---: | :---: | :--- | :--- |
+| \`T1\` | \`[ ]\` | \`high\` | single | \`-\` | Unfinished work | Tests pass |
+`;
+  fs.writeFileSync(planPath, wipPlan, 'utf8');
+
+  // Unfinished [ ] task -> must refuse without --force
   const blocked = runBatonflow(['archive', 'wip-feature'], { cwd: dir });
   assert.equal(blocked.status, 1);
   assert.match(blocked.stderr, /Refusing to archive/);
 
-  // With --force -> archives cleanly
+  // With --force -> archives cleanly and resets to IDLE with zero [ ] tasks
   const forced1 = runBatonflow(['archive', 'wip-feature', '--force'], { cwd: dir });
   assert.equal(forced1.status, 0, forced1.stderr);
   const archiveDir = path.join(dir, '.batonflow', 'archive');
@@ -568,14 +579,14 @@ test('23. `batonflow archive` refuses unfinished PLAN.md unless --force, and avo
   assert.match(files1[0], /^\d{4}-\d{2}-\d{2}-wip-feature\.md$/);
 
   // Second archive with same slug creates -2.md without overwriting the first
-  const forced2 = runBatonflow(['archive', 'wip-feature', '--force'], { cwd: dir });
+  const forced2 = runBatonflow(['archive', 'wip-feature'], { cwd: dir });
   assert.equal(forced2.status, 0, forced2.stderr);
   const files2 = fs.readdirSync(archiveDir).sort();
   assert.equal(files2.length, 2);
   assert.ok(files2.some((f) => /-wip-feature-2\.md$/.test(f)));
 });
 
-test('24. `batonflow archive` succeeds on completed PLAN.md and preserves Section 1 project constraints', () => {
+test('24. `batonflow archive` resets PLAN.md to clean IDLE state, keeps Tech Stack/Verification, clears old constraints', () => {
   const dir = path.join(tmpBase, 'archive-smart-reset');
   fs.mkdirSync(dir, { recursive: true });
   assert.equal(runBatonflow(['init'], { cwd: dir }).status, 0);
@@ -587,7 +598,7 @@ test('24. `batonflow archive` succeeds on completed PLAN.md and preserves Sectio
 
 ## 1. Global Goal & Constraints
 
-- **Objective**: Implement JWT login and refresh token rotation
+- **Objective**: Implement frontend-only login UI
 - **Tech Stack**: TypeScript, Node 22, PostgreSQL, Vitest
 - **Repo Conventions**: Follow existing \`AGENTS.md\` / \`CLAUDE.md\`.
 - **Verification Commands**:
@@ -595,7 +606,7 @@ test('24. `batonflow archive` succeeds on completed PLAN.md and preserves Sectio
   - Build / Typecheck: \`pnpm typecheck\`
   - Lint: \`pnpm lint\`
 - **Hard Constraints / Do Not Touch**:
-  - Never alter historical SQL migrations
+  - Frontend UI only: do NOT build any backend login API
 
 ---
 
@@ -605,7 +616,7 @@ Status legend: \`[ ]\` Pending · \`[x]\` Verified & Committed · \`[!]\` Interr
 
 | ID | Status | Tier | Batch | Depends On | Task Description | Acceptance Criteria |
 | :--- | :---: | :---: | :---: | :---: | :--- | :--- |
-| \`T1\` | \`[x]\` | \`high\` | single | \`-\` | Build JWT service | Tests pass |
+| \`T1\` | \`[x]\` | \`high\` | single | \`-\` | Build login form | Tests pass |
 | \`T2\` | \`[x]\` | \`low\` | single | \`T1\` | Add unit tests | Tests pass |
 
 ---
@@ -616,25 +627,27 @@ Status legend: \`[ ]\` Pending · \`[x]\` Verified & Committed · \`[!]\` Interr
 `;
   fs.writeFileSync(planPath, completedPlan, 'utf8');
 
-  const res = runBatonflow(['archive', 'jwt-auth'], { cwd: dir });
+  const res = runBatonflow(['archive', 'login-ui'], { cwd: dir });
   assert.equal(res.status, 0, res.stderr);
-  assert.match(res.stdout, /preserved Tech Stack, Verification Commands, and Hard Constraints/);
+  assert.match(res.stdout, /Reset PLAN\.md to IDLE/);
 
   // Archived copy contains original completed plan
   const archiveDir = path.join(dir, '.batonflow', 'archive');
   const archivedFiles = fs.readdirSync(archiveDir);
   assert.equal(archivedFiles.length, 1);
   const archivedContent = fs.readFileSync(path.join(archiveDir, archivedFiles[0]), 'utf8');
-  assert.match(archivedContent, /Implement JWT login and refresh token rotation/);
-  assert.match(archivedContent, /Build JWT service/);
+  assert.match(archivedContent, /Implement frontend-only login UI/);
+  assert.match(archivedContent, /Frontend UI only: do NOT build any backend login API/);
 
-  // Reset PLAN.md cleared old Objective & old tasks, but kept Tech Stack, Verification Commands & Hard Constraints!
+  // Reset PLAN.md is IDLE, has ZERO fake [ ] tasks, keeps Tech Stack & Verification, and drops stale Hard Constraints
   const resetContent = fs.readFileSync(planPath, 'utf8');
-  assert.doesNotMatch(resetContent, /Implement JWT login and refresh token rotation/);
-  assert.doesNotMatch(resetContent, /Build JWT service/);
+  assert.match(resetContent, /- \*\*State\*\*: `IDLE`/);
+  assert.doesNotMatch(resetContent, /^\|\s*`?T\d+`?\s*\|\s*`?\[\s\]`?/m);
+  assert.doesNotMatch(resetContent, /Implement frontend-only login UI/);
+  assert.doesNotMatch(resetContent, /Frontend UI only: do NOT build any backend login API/);
   assert.match(resetContent, /TypeScript, Node 22, PostgreSQL, Vitest/);
   assert.match(resetContent, /pnpm test/);
-  assert.match(resetContent, /Never alter historical SQL migrations/);
+  assert.match(resetContent, /\n\n---\n\n## 2\. Task Board/);
 });
 
 test('25. `batonflow upgrade` refreshes framework files while preserving user config, PLAN.md, and settings', () => {

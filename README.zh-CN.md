@@ -204,7 +204,7 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 | `init [目录] [--adapter ...] [--permission-mode safe\|yolo] [--force]` | 初始化配置、工作流、任务板、通用 Skill（`.agents/skills/` 与 `.claude/skills/`）与适配器到指定目录（默认当前目录） |
 | `init --global-skill [目标] [--force]` | 一次性将通用 Skill 安装到全局（`all` / `antigravity` / `claude-code` / `codex`），不生成项目文件 |
 | `mode <safe\|yolo> [--config <路径>]` | 一键切换 `batonflow.config.json` 中内置 Executor 的权限模式（`safe` 安全工作区写入 / `yolo` 隔离容器全放开） |
-| `archive [名称] [--force] [--plan <路径>]` | 将已完成的 `PLAN.md` 归档至 `.batonflow/archive/YYYY-MM-DD-<名称>.md`，并智能重置 `PLAN.md`（自动保留技术栈、测试命令与硬约束），防止上下文膨胀 |
+| `archive [名称] [--force] [--plan <路径>]` | 将已完成的 `PLAN.md` 归档至 `.batonflow/archive/YYYY-MM-DD-<名称>.md`，并重置为干净的 `IDLE` 空白计划（自动保留技术栈与测试命令，清空旧任务与旧需求专属约束） |
 | `upgrade [目录] [--adapter ...] [--global-skill [目标]]` | 升级 `batonflow` 后一键安全刷新项目的 `.batonflow/WORKFLOW.md`、`SKILL.md`、规则与 `CLAUDE.md` 锚点块，**绝不覆盖** `batonflow.config.json`、`PLAN.md` 与 `.claude/settings.json` |
 | `--tier <high\|low>` | 指定能力档位（派发任务时必填） |
 | `--effort <强度>` | 指定推理/思维强度：`low \| medium \| high \| xhigh \| max`（可选，默认读取 `default_effort[tier]`） |
