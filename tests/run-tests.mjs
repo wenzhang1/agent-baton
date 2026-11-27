@@ -717,6 +717,49 @@ test('25. `batonflow upgrade` refreshes framework files while preserving user co
   assert.match(fs.readFileSync(globalAgySkill, 'utf8'), /^---\nname: batonflow\n/);
 });
 
+test('26. Dual timeout: idle_timeout_seconds resets on live output, kills silent hangs, and can be disabled with 0', () => {
+  // 26a. Active heartbeat output (>2s total) keeps resetting 1s idle timeout and succeeds (exit 0)
+  const { dir: dirAlive } = createTestWorkspace('idle-timeout-alive', {
+    timeout_seconds: 10,
+    idle_timeout_seconds: 1,
+  });
+  const aliveRes = runBatonflow(['--tier', 'low', '--task', 'Long active task'], {
+    cwd: dirAlive,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:heartbeat' },
+  });
+  assert.equal(aliveRes.status, 0, aliveRes.stderr);
+  assert.equal(parseMockJson(aliveRes.stdout).status, 'ok_heartbeat');
+
+  // 26b. Silent hang triggers idle_timeout (~1s) well before 15s total timeout
+  const { dir: dirIdle } = createTestWorkspace('idle-timeout-hang', {
+    timeout_seconds: 15,
+    idle_timeout_seconds: 1,
+  });
+  const startMs = Date.now();
+  const idleRes = runBatonflow(['--tier', 'low', '--task', 'Silent hung task'], {
+    cwd: dirIdle,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:hang' },
+  });
+  const elapsedMs = Date.now() - startMs;
+  assert.equal(idleRes.status, 1, idleRes.stderr);
+  assert.match(idleRes.stderr, /IDLE_TIMEOUT: executor "codex" produced no output for 1s/);
+  assert.match(idleRes.stderr, /RESULT exit=1 reason=idle_timeout/);
+  assert.ok(elapsedMs < 6000, `Expected idle timeout to fire well before 15s, took ${elapsedMs}ms`);
+
+  // 26c. idle_timeout_seconds: 0 disables idle timeout cleanly (hard timeout_seconds still fires)
+  const { dir: dirDisabled } = createTestWorkspace('idle-timeout-disabled', {
+    timeout_seconds: 1,
+    idle_timeout_seconds: 0,
+  });
+  const hardRes = runBatonflow(['--tier', 'low', '--task', 'Hard cap only'], {
+    cwd: dirDisabled,
+    env: { BATONFLOW_MOCK_BEHAVIOR: 'codex:hang' },
+  });
+  assert.equal(hardRes.status, 1, hardRes.stderr);
+  assert.match(hardRes.stderr, /TIMEOUT: executor "codex" exceeded total timeout of 1s/);
+  assert.match(hardRes.stderr, /RESULT exit=1 reason=timeout/);
+});
+
 // Run all tests
 let passed = 0;
 let failed = 0;

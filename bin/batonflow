@@ -347,6 +347,9 @@ async function main() {
       console.log(`Short limit policy:  ${config.exhaustion_policy.short_limit}`);
       console.log(`Weekly limit policy: ${config.exhaustion_policy.weekly_limit}`);
       console.log(`Timeout:             ${config.timeout_seconds}s`);
+      console.log(
+        `Idle timeout:        ${config.idle_timeout_seconds > 0 ? `${config.idle_timeout_seconds}s` : 'disabled'}`
+      );
       console.log('Execution plan:');
       steps.forEach((step, idx) => {
         console.log(`  ${idx + 1}. [${step.executor}] model=${step.model} effort=${step.effort}`);

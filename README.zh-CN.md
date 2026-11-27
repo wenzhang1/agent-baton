@@ -168,6 +168,10 @@ batonflow --dry-run --tier high --task "验证执行链路与模型路由"
 > batonflow mode safe    # 一键切回安全的工作区受限写入模式
 > ```
 >
+> **双保险超时控制（`idle_timeout_seconds` + `timeout_seconds`）**：
+> - **`idle_timeout_seconds`** *（默认 `600` 秒 = 10 分钟，设为 `0` 可关闭）*：**无输出空闲超时**。只要 Executor 的 `stdout`/`stderr` 有任何新输出就自动续期，正常长时间编码/推理任务不会被误杀；彻底卡死无输出超限时才会强杀进程组（`exit 1`，`reason=idle_timeout`）。
+> - **`timeout_seconds`** *（默认 `1800` 秒 = 30 分钟）*：**单次任务总时长硬上限**，防止死循环不断打印日志导致空闲计时器无限续期（`exit 1`，`reason=timeout`）。
+>
 > **思维/推理强度控制（`--effort`）**：原生支持 `low` / `medium` / `high` / `xhigh` / `max` 5 档。不传 `--effort` 时自动采用 `default_effort[tier]`（默认 `high` 档用 `high`，`low` 档用 `medium`）；`effort_map` 可在接力时自动把目标 CLI 不支持的档位做平滑降级（例如把 `max` 自动映射为 `agy`/Gemini 4 支持的 `xhigh`，防止接力报错）。
 >
 > **命令模板双格式安全兼容**：推荐使用**参数数组格式**（`shell: false` 直接传递参数，任务中包含多行代码块、引号、反引号、`$VAR` 也不会产生转义错误）；同时也兼容单行**字符串模板**（如 `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`），内部会自动安全分词或 POSIX 转义。

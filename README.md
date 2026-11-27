@@ -166,6 +166,10 @@ See [`batonflow.config.example.json`](batonflow.config.example.json) for the ful
 > batonflow mode safe    # Switch back to scoped workspace-write defaults
 > ```
 >
+> **Dual Timeout Protection (`idle_timeout_seconds` + `timeout_seconds`):**
+> - **`idle_timeout_seconds`** *(default `600` = 10 min; set `0` to disable)*: Resets automatically whenever the Executor emits any `stdout`/`stderr` output, so active long-running coding tasks keep running while genuinely frozen processes are terminated cleanly (`exit 1`, `reason=idle_timeout`).
+> - **`timeout_seconds`** *(default `1800` = 30 min)*: Hard wall-clock safety cap per dispatch, preventing runaway infinite-log loops (`exit 1`, `reason=timeout`).
+>
 > **Reasoning / Thinking Effort (`--effort`):** Supports `low`, `medium`, `high`, `xhigh`, and `max`. When omitted, `batonflow` uses `default_effort[tier]` (`high` → `high`, `low` → `medium`). Use `effort_map` to safely downgrade unsupported levels during failover (e.g., mapping `max` → `xhigh` for `agy` / Gemini 4).
 >
 > **Safe Command Templates:** `commands` supports both **argv arrays** (recommended—executed with `shell: false`, 100% immune to quote/backtick/newline/`$VAR` corruption) and **string templates** (e.g., `"codex exec -m {{model}} -c model_reasoning_effort={{effort}} \"{{task}}\""`, safely tokenized or POSIX-quoted automatically).

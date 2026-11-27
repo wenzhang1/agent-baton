@@ -100,7 +100,8 @@
     "short_limit": 900,
     "weekly_limit": 86400
   },
-  "timeout_seconds": 600,
+  "timeout_seconds": 1800,
+  "idle_timeout_seconds": 600,
   "log_dir": ".batonflow/logs",
   "state_file": ".batonflow/state.json",
   "executor_prompt_prefix": "[BATONFLOW_EXECUTOR_MODE] You are acting strictly as a code Executor for this single task. Follow the repository's coding standards (AGENTS.md / CLAUDE.md), implement the task directly, do NOT invoke batonflow, and do NOT modify PLAN.md.\n\n"
